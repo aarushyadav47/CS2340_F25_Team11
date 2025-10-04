@@ -1,6 +1,6 @@
 ### Team members
 
-aarush Yadav
+Aarush Yadav
 
 Aazam Alam
 
@@ -9,3 +9,5 @@ Rayeed Zaman
 Suhani Gandhi
 
 Showmick Das
+
+Daanish Mehra
