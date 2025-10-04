@@ -29,8 +29,8 @@ public class Register extends AppCompatActivity {
             //Firebase Auth and stuff
         });
 
-        Button openRegister = findViewById(R.id.open_register);
-        openRegister.setOnClickListener(new View.OnClickListener() {
+        Button openLogin = findViewById(R.id.open_login);
+        openLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick (View v){
                 Intent intent = new Intent(Register.this, Login.class);

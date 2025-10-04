@@ -18,7 +18,7 @@
         android:layout_height="match_parent"
         tools:context=".view.MainActivity">
 
-        <!-- Login Title -->
+        <!-- Register Title -->
         <TextView
             android:id="@+id/register_header"
             android:layout_width="wrap_content"
@@ -72,7 +72,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/email_field"/>
 
-        <!-- Login Button -->
+        <!-- Register Button -->
         <Button
             android:id="@+id/register_button"
             android:layout_width="0dp"
@@ -90,7 +90,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/password_field" />
 
-        <!-- Create Account Button -->
+        <!-- Login Instead Button -->
         <Button
             android:id="@+id/open_login"
             android:layout_width="0dp"
