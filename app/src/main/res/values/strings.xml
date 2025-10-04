@@ -3,4 +3,6 @@
     <string name="chatbot_content">Chatbot Content Goes Here</string>
     <string name="budgets_content">Budgets Content Goes Here</string>
     <string name="expense_log_content">Expense Log Content Goes Here</string>
+    <string name="app_name">CS2340_F25_Team11</string>
+
 </resources>

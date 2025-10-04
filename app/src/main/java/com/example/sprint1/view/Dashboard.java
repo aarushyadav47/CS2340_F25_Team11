@@ -1,55 +1,71 @@
 package com.example.sprint1.view;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.widget.Button;
 import android.view.View;
-
+import android.view.ViewGroup;
+import android.widget.ImageView;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.sprint1.R;
 import com.example.sprint1.databinding.DashboardBinding;
 
 public class Dashboard extends AppCompatActivity {
+
+    private DashboardBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Using data binding to inflate the layout
-        DashboardBinding binding = DashboardBinding.inflate(getLayoutInflater());
+        binding = DashboardBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
-        // Optional ViewModel setup
-        // binding.setVariable(BR.viewModel, viewModel); //Use the right view model
         binding.setLifecycleOwner(this);
 
-        // Use findViewById for buttons
-        View dashboardNavigate = findViewById(R.id.dashboard_navigate);
-        View expenseLogNavigate = findViewById(R.id.expenseLog_navigate);
-        View budgetNavigate = findViewById(R.id.budget_navigate);
-        View savingCircleNavigate = findViewById(R.id.savingCircle_navigate);
-        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
+        // Setup bottom nav buttons
+        setupNavClick((ViewGroup) binding.dashboardNavigate, Dashboard.class);
+        setupNavClick((ViewGroup) binding.expenseLogNavigate, ExpenseLog.class);
+        setupNavClick((ViewGroup) binding.budgetNavigate, Budget.class);
+        setupNavClick((ViewGroup) binding.savingCircleNavigate, SavingCircle.class);
+        setupNavClick((ViewGroup) binding.chatbotNavigate, Chatbot.class);
 
-        // Set click listeners using lambdas
-        dashboardNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Dashboard.class))
-        );
+        // Highlight current page
+        highlightActiveButton((ViewGroup) binding.dashboardNavigate);
+    }
 
-        expenseLogNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, ExpenseLog.class))
-        );
+    private void setupNavClick(ViewGroup button, Class<?> targetActivity) {
+        button.setOnClickListener(v -> {
+            if (!targetActivity.equals(Dashboard.class)) {
+                startActivity(new Intent(Dashboard.this, targetActivity));
+            }
+        });
+    }
 
-        budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Budget.class))
-        );
+    private void highlightActiveButton(ViewGroup activeButton) {
+        resetNavIcons();
 
-        savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, SavingCircle.class))
-        );
+        ImageView icon = (ImageView) activeButton.getChildAt(0);
+        View indicator = (View) activeButton.getChildAt(1);
 
-        chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Chatbot.class))
-        );
+        icon.setColorFilter(Color.BLACK);
+        indicator.setVisibility(View.VISIBLE);
+        indicator.setBackgroundColor(Color.BLACK);
+    }
+
+    private void resetNavIcons() {
+        ViewGroup[] buttons = {
+                (ViewGroup) binding.dashboardNavigate,
+                (ViewGroup) binding.expenseLogNavigate,
+                (ViewGroup) binding.budgetNavigate,
+                (ViewGroup) binding.savingCircleNavigate,
+                (ViewGroup) binding.chatbotNavigate
+        };
+
+        for (ViewGroup button : buttons) {
+            ImageView icon = (ImageView) button.getChildAt(0);
+            View indicator = (View) button.getChildAt(1);
+
+            icon.setColorFilter(Color.parseColor("#888888"));
+            indicator.setVisibility(View.INVISIBLE);
+        }
     }
 }

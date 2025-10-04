@@ -21,6 +21,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".view.ExpenseLog" />
+        <activity android:name=".view.Budget" />
+        <activity android:name=".view.SavingCircle" />
+        <activity android:name=".view.Chatbot" />
     </application>
 
 </manifest>
