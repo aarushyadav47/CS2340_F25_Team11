@@ -19,5 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Spendwise"
-include ':app'
+rootProject.name = "Sprint1"
+include(":app")
+ 
