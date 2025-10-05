@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <data>
-        <!-- Optional: declare ViewModel here -->
+        <!-- Optional: declare variables here if using ViewModel -->
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -26,7 +26,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Main Content Area -->
+        <!-- Main Content Area (placeholder for dashboard content) -->
         <FrameLayout
             android:id="@+id/dashboard_content"
             android:layout_width="0dp"
@@ -38,6 +38,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
+            <!-- Add your dashboard content here -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -79,13 +80,14 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_home"
                     android:contentDescription="Home"
-                    app:tint="#888888"/>
+                    app:tint="#000000"/>
 
                 <View
                     android:layout_width="32dp"
                     android:layout_height="3dp"
-                    android:background="#000000"
-                    android:visibility="invisible"/>
+                    android:layout_marginTop="4dp"
+                    android:background="#000000"/>
+
             </LinearLayout>
 
             <!-- Expense Log Button -->
@@ -107,14 +109,9 @@
                     android:contentDescription="Expense Log"
                     app:tint="#888888"/>
 
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="3dp"
-                    android:background="#000000"
-                    android:visibility="invisible"/>
             </LinearLayout>
 
-            <!-- Budget Button -->
+            <!-- Budgets Button -->
             <LinearLayout
                 android:id="@+id/budget_navigate"
                 android:layout_width="0dp"
@@ -133,11 +130,6 @@
                     android:contentDescription="Budgets"
                     app:tint="#888888"/>
 
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="3dp"
-                    android:background="#000000"
-                    android:visibility="invisible"/>
             </LinearLayout>
 
             <!-- Saving Circle Button -->
@@ -159,11 +151,6 @@
                     android:contentDescription="Saving Circle"
                     app:tint="#888888"/>
 
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="3dp"
-                    android:background="#000000"
-                    android:visibility="invisible"/>
             </LinearLayout>
 
             <!-- Chatbot Button -->
@@ -185,11 +172,6 @@
                     android:contentDescription="Chatbot"
                     app:tint="#888888"/>
 
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="3dp"
-                    android:background="#000000"
-                    android:visibility="invisible"/>
             </LinearLayout>
 
         </LinearLayout>
