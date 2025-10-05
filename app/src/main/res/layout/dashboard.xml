@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <data>
-        <!-- Optional: declare variables here if using ViewModel -->
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -12,7 +11,7 @@
         android:layout_height="match_parent"
         android:background="#F5F5F7">
 
-        <!-- Dashboard Title -->
+        <!-- Title -->
         <TextView
             android:id="@+id/dashboard_title"
             android:layout_width="wrap_content"
@@ -26,7 +25,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Main Content Area (placeholder for dashboard content) -->
+        <!-- Placheolder UI -->
         <FrameLayout
             android:id="@+id/dashboard_content"
             android:layout_width="0dp"
@@ -38,7 +37,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <!-- Add your dashboard content here -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -49,7 +47,7 @@
 
         </FrameLayout>
 
-        <!-- Bottom Navigation Bar -->
+        <!-- Bottom Navi Bar -->
         <LinearLayout
             android:id="@+id/bottom_navigation"
             android:layout_width="0dp"
