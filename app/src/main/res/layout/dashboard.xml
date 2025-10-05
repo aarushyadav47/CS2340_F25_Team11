@@ -78,7 +78,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_launcher_background"
+                    android:src="@drawable/ic_home"
                     android:contentDescription="Home"
                     app:tint="#000000"/>
 
@@ -105,7 +105,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_launcher_background"
+                    android:src="@drawable/ic_expense_log"
                     android:contentDescription="Expense Log"
                     app:tint="#888888"/>
 
@@ -126,7 +126,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_launcher_background"
+                    android:src="@drawable/ic_budget"
                     android:contentDescription="Budgets"
                     app:tint="#888888"/>
 
@@ -147,7 +147,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_launcher_background"
+                    android:src="@drawable/ic_savings"
                     android:contentDescription="Saving Circle"
                     app:tint="#888888"/>
 
@@ -168,7 +168,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_launcher_background"
+                    android:src="@drawable/ic_chat"
                     android:contentDescription="Chatbot"
                     app:tint="#888888"/>
 
