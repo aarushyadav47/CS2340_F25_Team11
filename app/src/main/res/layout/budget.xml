@@ -78,13 +78,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_home"
                     android:contentDescription="Home"
-                    app:tint="#000000"/>
-
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="3dp"
-                    android:layout_marginTop="4dp"
-                    android:background="#000000"/>
+                    app:tint="#888888"/>
 
             </LinearLayout>
 
@@ -126,8 +120,13 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_budget"
                     android:contentDescription="Budgets"
-                    app:tint="#888888"/>
+                    app:tint="#000000"/>
 
+                <View
+                    android:layout_width="32dp"
+                    android:layout_height="3dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#000000"/>
             </LinearLayout>
 
             <!-- Saving Circle Button -->
