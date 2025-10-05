@@ -8,16 +8,16 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.spendwise.R;
-import com.example.spendwise.databinding.DashboardBinding;
+import com.example.spendwise.databinding.ExpenselogBinding;
 
-public class Dashboard extends AppCompatActivity {
+public class ExpenseLog extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         // Using data binding to inflate the layout
-        DashboardBinding binding = DashboardBinding.inflate(getLayoutInflater());
+        ExpenselogBinding binding = ExpenselogBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         // Optional ViewModel setup
@@ -31,25 +31,25 @@ public class Dashboard extends AppCompatActivity {
         View savingCircleNavigate = findViewById(R.id.savingCircle_navigate);
         View chatbotNavigate = findViewById(R.id.chatbot_navigate);
 
-        // Set click listeners using lambdas
+        // Set click listeners using lambdas for the routing
         dashboardNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Dashboard.class))
+                startActivity(new Intent(this, Dashboard.class))
         );
 
         expenseLogNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, ExpenseLog.class))
+                startActivity(new Intent(this, ExpenseLog.class))
         );
 
         budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Budget.class))
+                startActivity(new Intent(this, Budget.class))
         );
 
         savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, SavingCircle.class))
+                startActivity(new Intent(this, SavingCircle.class))
         );
 
         chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Chatbot.class))
+                startActivity(new Intent(this, Chatbot.class))
         );
     }
 }
