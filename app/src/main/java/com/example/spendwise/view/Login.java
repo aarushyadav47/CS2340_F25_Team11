@@ -1,40 +1,52 @@
 package com.example.spendwise.view;
+
+import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.Intent;
-import android.view.View;
-import android.widget.Button;
-
-import com.example.spendwise.R;
 import com.example.spendwise.databinding.LoginBinding;
+import com.google.firebase.auth.FirebaseAuth;
 
 public class Login extends AppCompatActivity {
+
+    private FirebaseAuth mAuth;
+    private LoginBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //Using data binding to inflate the layout(no explicit mention)
-        LoginBinding binding = LoginBinding.inflate(getLayoutInflater());
+
+        binding = LoginBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        //Binding viewmodel to the layout
-        // binding.setVariable(BR.viewModel, viewModel); Needed though
-        binding.setLifecycleOwner(this); //the viewmodel is binded by this file - not destroyed by rotations
+        mAuth = FirebaseAuth.getInstance();
+        binding.setLifecycleOwner(this);
 
-        Button login = findViewById(R.id.login_button);
-        login.setOnClickListener(v -> {
-            //Firebase Auth and stuff
-        });
+        // Login user
+        binding.loginButton.setOnClickListener(v -> {
+            String email = binding.emailField.getText().toString().trim();
+            String password = binding.passwordField.getText().toString().trim();
 
-        Button openRegister = findViewById(R.id.open_register);
-        openRegister.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick (View v){
-                Intent intent = new Intent(Login.this, Register.class);
-                startActivity(intent);
+            if(email.isEmpty() || password.isEmpty()){
+                Toast.makeText(Login.this, "Please enter email and password", Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            mAuth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(task -> {
+                        if(task.isSuccessful()){
+                            Toast.makeText(Login.this, "Login successful!", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(Login.this, Dashboard.class));
+                            finish();
+                        } else {
+                            Toast.makeText(Login.this, "Login failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
         });
+
+        // Open Register screen
+        binding.openRegister.setOnClickListener(v -> startActivity(new Intent(Login.this, Register.class)));
     }
 }
