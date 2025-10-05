@@ -8,16 +8,16 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.spendwise.R;
-import com.example.spendwise.databinding.DashboardBinding;
+import com.example.spendwise.databinding.SavingcircleBinding;
 
-public class Dashboard extends AppCompatActivity {
+public class SavingCircle extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         // Using data binding to inflate the layout
-        DashboardBinding binding = DashboardBinding.inflate(getLayoutInflater());
+        SavingcircleBinding binding = SavingcircleBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         // Optional ViewModel setup
@@ -33,23 +33,23 @@ public class Dashboard extends AppCompatActivity {
 
         // Set click listeners using lambdas
         dashboardNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Dashboard.class))
+                startActivity(new Intent(this, Dashboard.class))
         );
 
         expenseLogNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, ExpenseLog.class))
+                startActivity(new Intent(this, ExpenseLog.class))
         );
 
         budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Budget.class))
+                startActivity(new Intent(this, Budget.class))
         );
 
         savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, SavingCircle.class))
+                startActivity(new Intent(this, SavingCircle.class))
         );
 
         chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(Dashboard.this, Chatbot.class))
+                startActivity(new Intent(this, Chatbot.class))
         );
     }
 }
