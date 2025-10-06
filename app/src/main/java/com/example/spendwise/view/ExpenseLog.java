@@ -51,6 +51,18 @@ public class ExpenseLog extends AppCompatActivity {
         chatbotNavigate.setOnClickListener(v ->
                 startActivity(new Intent(this, Chatbot.class))
         );
+
+        // Add Expense button - placeholder for future expense entry form
+        View addExpenseButton = findViewById(R.id.add_expense_button);
+        addExpenseButton.setOnClickListener(v -> {
+            // TODO: This will navigate to expense entry form in Sprint 2
+            // For now, show placeholder message
+            android.widget.Toast.makeText(
+                    this,
+                    "Expense entry form will be implemented in a later sprint",
+                    android.widget.Toast.LENGTH_LONG
+            ).show();
+        });
     }
 }
 
