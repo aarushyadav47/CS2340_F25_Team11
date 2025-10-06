@@ -174,5 +174,18 @@
 
         </LinearLayout>
 
+        <!-- Add Expense Button -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/add_expense_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="24dp"
+            android:src="@android:drawable/ic_input_add"
+            android:contentDescription="Add Expense"
+            android:backgroundTint="#000000"
+            app:tint="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/expenseLog_title" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>
