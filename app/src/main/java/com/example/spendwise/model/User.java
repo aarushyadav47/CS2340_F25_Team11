@@ -1,12 +1,12 @@
 package com.example.spendwise.model;
 public class User {
-    // Attributes
+    // Attributs
     private String id;
     private String name;
     private String email;
     private String password; // store securely in real apps!
 
-    // Constructor
+    // Constructorss
     public User(String id, String name, String email, String password) {
         this.id = id;
         this.name = name;
@@ -47,7 +47,6 @@ public class User {
         this.password = password;
     }
 
-    // Example method
     public void printUserInfo() {
         System.out.println("User: " + name + ", Email: " + email);
     }
