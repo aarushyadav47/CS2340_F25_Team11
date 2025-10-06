@@ -51,6 +51,18 @@ public class Budget extends AppCompatActivity {
         chatbotNavigate.setOnClickListener(v ->
                 startActivity(new Intent(this, Chatbot.class))
         );
+
+        // Add Budget button - placeholder for future budget creation form
+        View addBudgetButton = findViewById(R.id.add_budget_button);
+        addBudgetButton.setOnClickListener(v -> {
+            // TODO: This will navigate to budget creation form in Sprint 2
+            // For now, show placeholder message
+            android.widget.Toast.makeText(
+                    this,
+                    "Budget creation form will be implemented in a later sprint",
+                    android.widget.Toast.LENGTH_LONG
+            ).show();
+        });
     }
 }
 
