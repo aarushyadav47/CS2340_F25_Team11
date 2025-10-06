@@ -7,8 +7,8 @@ import android.content.Intent;
 import android.view.View;
 import android.widget.Button;
 
-import com.example.spendwise.R;
 import com.example.spendwise.databinding.LoginBinding;
+import com.example.spendwise.R;
 
 public class Login extends AppCompatActivity {
 
