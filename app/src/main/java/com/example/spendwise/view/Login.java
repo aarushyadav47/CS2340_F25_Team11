@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.spendwise.databinding.LoginBinding;
+import com.example.spendwise.R;
 
 import com.example.spendwise.viewModel.LoginViewModel;
 
