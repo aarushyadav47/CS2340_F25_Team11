@@ -10,7 +10,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.ExpenselogBinding;
 
+import com.example.spendwise.viewModel.ExpenseViewModel;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+import android.widget.AutoCompleteTextView;
+
 public class ExpenseLog extends AppCompatActivity {
+
+    private ExpenseViewModel expenseViewModel;
+    private ExpenselogBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +38,8 @@ public class ExpenseLog extends AppCompatActivity {
         View budgetNavigate = findViewById(R.id.budget_navigate);
         View savingCircleNavigate = findViewById(R.id.savingCircle_navigate);
         View chatbotNavigate = findViewById(R.id.chatbot_navigate);
+        View expenseLogForm = findViewById(R.id.form_Container);
+        View expenseLogMsg = findViewById(R.id.expenseLog_msg);
 
         // Set click listeners using lambdas for the routing
         dashboardNavigate.setOnClickListener(v ->
@@ -55,13 +65,29 @@ public class ExpenseLog extends AppCompatActivity {
         // Add Expense button - placeholder for future expense entry form
         View addExpenseButton = findViewById(R.id.add_expense_button);
         addExpenseButton.setOnClickListener(v -> {
-            // TODO: This will navigate to expense entry form in Sprint 2
-            // For now, show placeholder message
-            android.widget.Toast.makeText(
-                    this,
-                    "Expense entry form will be implemented in a later sprint",
-                    android.widget.Toast.LENGTH_LONG
-            ).show();
+            expenseLogForm.setVisibility(View.VISIBLE);
+            expenseLogMsg.setVisibility(View.GONE);
+        });
+
+        View createExpenseBtn = findViewById(R.id.create_Expense);
+        createExpenseBtn.setOnClickListener(v->{
+            // Get all input fields
+            TextInputEditText expenseNameInput = findViewById(R.id.expenseNameInput);
+            TextInputEditText amountInput = findViewById(R.id.amountInput);
+            AutoCompleteTextView categoryInput = findViewById(R.id.categoryInput);
+            TextInputEditText dateInput = findViewById(R.id.dateInput);
+            TextInputEditText notesInput = findViewById(R.id.notesInput);
+
+            // Get the text from each field
+            String name = expenseNameInput.getText().toString();
+            String amount = amountInput.getText().toString();
+            String category = categoryInput.getText().toString();
+            String date = dateInput.getText().toString();
+            String notes = notesInput.getText().toString();
+            //Firebase addition
+
+            //Show the different expenses in the expense Log
+
         });
     }
 }
