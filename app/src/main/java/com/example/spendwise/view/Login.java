@@ -1,40 +1,51 @@
 package com.example.spendwise.view;
-import android.os.Bundle;
-
-import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
-import android.view.View;
-import android.widget.Button;
+import android.os.Bundle;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.spendwise.databinding.LoginBinding;
 import com.example.spendwise.R;
 
+import com.example.spendwise.viewModel.LoginViewModel;
+
 public class Login extends AppCompatActivity {
+
+    private LoginViewModel loginViewModel;
+    private LoginBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //Using data binding to inflate the layout(no explicit mention)
-        LoginBinding binding = LoginBinding.inflate(getLayoutInflater());
+
+        binding = LoginBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        //Binding viewmodel to the layout
-        // binding.setVariable(BR.viewModel, viewModel); Needed though
-        binding.setLifecycleOwner(this); //the viewmodel is binded by this file - not destroyed by rotations
+        loginViewModel = new ViewModelProvider(this).get(LoginViewModel.class);
+        binding.setLifecycleOwner(this);
 
-        Button login = findViewById(R.id.login_button);
-        login.setOnClickListener(v -> {
-            //Firebase Auth and stuff
-        });
 
-        Button openRegister = findViewById(R.id.open_register);
-        openRegister.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick (View v){
-                Intent intent = new Intent(Login.this, Register.class);
-                startActivity(intent);
+        loginViewModel.getLoginResult().observe(this, result -> {
+            if ("SUCCESS".equals(result)) {
+                Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(Login.this, Dashboard.class));
+                finish();
+            } else {
+                Toast.makeText(this, result, Toast.LENGTH_LONG).show();
             }
         });
+
+        // Login button click interaction with the user
+        binding.loginButton.setOnClickListener(v -> {
+            String email = binding.emailField.getText().toString().trim();
+            String password = binding.passwordField.getText().toString().trim();
+            loginViewModel.login(email, password);
+        });
+
+        // Opens the Register screen
+        binding.openRegister.setOnClickListener(v -> startActivity(new Intent(Login.this, Register.class)));
     }
 }

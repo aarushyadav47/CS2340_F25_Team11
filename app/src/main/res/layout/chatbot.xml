@@ -17,7 +17,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:text="Chatbo"
+            android:text="Chatbot"
             android:textColor="#000000"
             android:textSize="32sp"
             android:textStyle="bold"
@@ -63,7 +63,7 @@
 
             <!-- Dashboard Button -->
             <LinearLayout
-                android:id="@+id/dashboard_content"
+                android:id="@+id/dashboard_navigate"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
@@ -78,13 +78,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_home"
                     android:contentDescription="Home"
-                    app:tint="#000000"/>
-
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="3dp"
-                    android:layout_marginTop="4dp"
-                    android:background="#000000"/>
+                    app:tint="#888888"/>
 
             </LinearLayout>
 
@@ -168,8 +162,13 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_chat"
                     android:contentDescription="Chatbot"
-                    app:tint="#888888"/>
+                    app:tint="#000000"/>
 
+                <View
+                    android:layout_width="32dp"
+                    android:layout_height="3dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#000000"/>
             </LinearLayout>
 
         </LinearLayout>
