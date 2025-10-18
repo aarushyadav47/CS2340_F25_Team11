@@ -1,18 +1,19 @@
 package com.example.spendwise.model;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class Budget {
+    private final double amount;
     private String name;
     private double limit;
     private List<ExpenseRecord> expenses;
     private String category;
     private String frequency;
-    private Date startDate;
+    private String startDate;
 
-    public Budget(String name, double limit) {
+    public Budget(double amount, String name, double limit) {
+        this.amount = amount;
         this.name = name;
         this.limit = limit;
         this.expenses = new ArrayList<>();
@@ -21,8 +22,17 @@ public class Budget {
         this.startDate = startDate;
     }
 
-    public Budget() {
+    public Budget(double amount) {
+        this.amount = amount;
         this.expenses = new ArrayList<>();
+    }
+
+    public Budget(String name, double amount, String category, String frequency, String startDate) {
+        this.name = name;
+        this.amount = amount;
+        this.category = category;
+        this.frequency = frequency;
+        this.startDate = startDate;
     }
 
     public String getName() {
@@ -52,5 +62,25 @@ public class Budget {
 
     public double getRemaining() {
         return limit - getTotalSpent();
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getFrequency() {
+        return frequency;
+    }
+
+    public String getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate;
+    }
+
+    public void setFrequency(String frequency) {
+        this.frequency = frequency;
     }
 }
