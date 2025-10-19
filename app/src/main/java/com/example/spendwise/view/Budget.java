@@ -2,13 +2,18 @@ package com.example.spendwise.view;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.BudgetBinding;
+import com.example.spendwise.adapter.BudgetAdapter;
+import com.example.spendwise.viewModel.BudgetViewModel;
+
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 public class Budget extends AppCompatActivity {
 
@@ -34,6 +39,27 @@ public class Budget extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         binding.setLifecycleOwner(this);
+
+        BudgetViewModel vm = new ViewModelProvider(this).get(BudgetViewModel.class);
+        vm.refreshBudgets(true);
+
+        RecyclerView recyclerView = findViewById(R.id.budget_recycler_view);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        BudgetAdapter adapter = new BudgetAdapter();
+        recyclerView.setAdapter(adapter);
+        vm.getBudgets().observe(this, budgets -> {
+            adapter.setBudgets(budgets);
+        });
+
+        adapter.setOnItemClickListener(b -> {
+            Intent i = new Intent(this, BudgetDetails.class);
+            i.putExtra("name", b.getName());
+            i.putExtra("amount", b.getAmount());
+            i.putExtra("category", b.getCategory());
+            i.putExtra("frequency", b.getFrequency());
+            i.putExtra("startDate", b.getStartDate());
+            startActivity(i);
+        });
 
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
         View expenseLogNavigate = findViewById(R.id.expenseLog_navigate);
@@ -62,15 +88,7 @@ public class Budget extends AppCompatActivity {
         );
 
         View addBudgetButton = findViewById(R.id.add_budget_button);
-        addBudgetButton.setOnClickListener(v -> {
-            // TODO: This will navigate to budget creation form in Sprint 2
-
-            android.widget.Toast.makeText(
-                    this,
-                    "Budget creation form will be implemented in a later sprint",
-                    android.widget.Toast.LENGTH_LONG
-            ).show();
-        });
+        addBudgetButton.setOnClickListener(v -> startActivity(new Intent(this, FormBudget.class)));
     }
 }
 
