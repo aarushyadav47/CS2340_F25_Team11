@@ -54,7 +54,7 @@
                 android:layout_gravity="center"
                 android:orientation="vertical"
                 android:padding="24dp"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/expenseNameInputLayout"
@@ -174,6 +174,13 @@
                     android:textColor="@android:color/white" />
 
             </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/expense_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible"
+                android:padding="8dp" />
         </FrameLayout>
 
         <!-- Bottom Navi Bar -->

@@ -10,8 +10,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.ExpenselogBinding;
+import com.example.spendwise.model.Category;
 
 import java.text.SimpleDateFormat;
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Locale;
 import android.app.DatePickerDialog;
@@ -33,6 +35,7 @@ public class ExpenseLog extends AppCompatActivity {
     private ExpenselogBinding binding;
     private Calendar calendar = Calendar.getInstance();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    private SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +46,7 @@ public class ExpenseLog extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         // Optional ViewModel setup
-        expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class); //Use the right view model
+        expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class); // Use the right view model
         binding.setLifecycleOwner(this);
 
         expenseViewModel.getStatusMessage().observe(this, msg -> {
@@ -61,40 +64,32 @@ public class ExpenseLog extends AppCompatActivity {
 
         View expenseLogForm = findViewById(R.id.form_Container);
         View expenseLogMsg = findViewById(R.id.expenseLog_msg);
+        RecyclerView expenseList = findViewById(R.id.expense_recycler_view);
 
         // Set click listeners using lambdas for the routing
-        dashboardNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Dashboard.class))
-        );
+        dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
 
-        expenseLogNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, ExpenseLog.class))
-        );
+        expenseLogNavigate.setOnClickListener(v -> startActivity(new Intent(this, ExpenseLog.class)));
 
-        budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Budget.class))
-        );
+        budgetNavigate.setOnClickListener(v -> startActivity(new Intent(this, Budget.class)));
 
-        savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircle.class))
-        );
+        savingCircleNavigate.setOnClickListener(v -> startActivity(new Intent(this, SavingCircle.class)));
 
-        chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class))
-        );
+        chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
 
         // Add Expense button - placeholder for future expense entry form
         View addExpenseButton = findViewById(R.id.add_expense_button);
         addExpenseButton.setOnClickListener(v -> {
             expenseLogForm.setVisibility(View.VISIBLE);
             expenseLogMsg.setVisibility(View.GONE);
+            expenseList.setVisibility(View.GONE);
         });
 
         setupDatePicker();
 
         setupRecyclerView();
 
-        String[] options = {"Food", "Transport", "Entertainment", "Bills", "Health", "Shopping"};
+        String[] options = { "Food", "Transport", "Entertainment", "Bills", "Shopping", "Health", "Other" };
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 R.layout.dropdown_item, options);
 
@@ -102,7 +97,7 @@ public class ExpenseLog extends AppCompatActivity {
         dropdown.setAdapter(adapter);
 
         View createExpenseBtn = findViewById(R.id.create_Expense);
-        createExpenseBtn.setOnClickListener(v->{
+        createExpenseBtn.setOnClickListener(v -> {
             saveExpense();
         });
     }
@@ -127,8 +122,7 @@ public class ExpenseLog extends AppCompatActivity {
                     },
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
-                    calendar.get(Calendar.DAY_OF_MONTH)
-            );
+                    calendar.get(Calendar.DAY_OF_MONTH));
             datePickerDialog.show();
         });
     }
@@ -145,7 +139,13 @@ public class ExpenseLog extends AppCompatActivity {
         String name = expenseNameInput.getText().toString().trim();
         String amountStr = amountInput.getText().toString().trim();
         String categoryName = categoryInput.getText().toString().trim();
-        String date = dateInput.getText().toString();
+        String dateDisplay = dateInput.getText().toString();
+        String date;
+        try {
+            date = isoDateFormat.format(dateFormat.parse(dateDisplay));
+        } catch (ParseException e) {
+            date = isoDateFormat.format(calendar.getTime());
+        }
         String notes = notesInput.getText().toString().trim();
 
         // Validation
@@ -205,6 +205,8 @@ public class ExpenseLog extends AppCompatActivity {
 
         View expenseLogMsg = findViewById(R.id.expenseLog_msg);
         expenseLogMsg.setVisibility(View.VISIBLE);
+        RecyclerView expenseList = findViewById(R.id.expense_recycler_view);
+        expenseList.setVisibility(View.VISIBLE);
 
         clearForm();
     }
@@ -246,6 +248,7 @@ public class ExpenseLog extends AppCompatActivity {
             View expenseLogForm = findViewById(R.id.form_Container);
             expenseLogForm.setVisibility(View.VISIBLE);
             findViewById(R.id.expenseLog_msg).setVisibility(View.GONE);
+            findViewById(R.id.expense_recycler_view).setVisibility(View.GONE);
 
             // Populate form fields with expense data
             TextInputEditText expenseNameInput = findViewById(R.id.expenseNameInput);
@@ -257,7 +260,11 @@ public class ExpenseLog extends AppCompatActivity {
             expenseNameInput.setText(expense.getName());
             amountInput.setText(String.valueOf(expense.getAmount()));
             categoryInput.setText(expense.getCategory().getDisplayName(), false);
-            dateInput.setText(expense.getDate());
+            try {
+                dateInput.setText(dateFormat.format(isoDateFormat.parse(expense.getDate())));
+            } catch (ParseException e1) {
+                dateInput.setText(expense.getDate());
+            }
             notesInput.setText(expense.getNotes());
 
             // Store expense ID in a tag so you can update it later
@@ -274,8 +281,8 @@ public class ExpenseLog extends AppCompatActivity {
                 ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
             @Override
             public boolean onMove(RecyclerView recyclerView,
-                                  RecyclerView.ViewHolder viewHolder,
-                                  RecyclerView.ViewHolder target) {
+                    RecyclerView.ViewHolder viewHolder,
+                    RecyclerView.ViewHolder target) {
                 return false;
             }
 

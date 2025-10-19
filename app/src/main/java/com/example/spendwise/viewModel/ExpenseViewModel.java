@@ -2,23 +2,91 @@ package com.example.spendwise.viewModel;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
 
-import com.google.firebase.auth.FirebaseAuth;
+import com.example.spendwise.model.Category;
+import com.example.spendwise.model.Expense;
+import com.example.spendwise.repo.ExpenseRepo;
 
-public class ExpenseViewModel {
-    private final MutableLiveData<String> logResult = new MutableLiveData<>();
+import java.util.List;
 
-    public ExpenseViewModel() {}
+public class ExpenseViewModel extends ViewModel {
+    private final ExpenseRepo repo = ExpenseRepo.getInstance();
+    private final MutableLiveData<String> statusMessage = new MutableLiveData<>();
+    private final MutableLiveData<List<Expense>> expenses = new MutableLiveData<>();
 
-    public LiveData<String> getLoginResult() {
-        return logResult;
+    public ExpenseViewModel() {
+        refreshExpenses(true);
     }
 
-    public void addExpense(String name, String amount, String category, String date) {
-        if (name.isEmpty() || amount == null ||date.isEmpty()) {
-            logResult.setValue("Please enter valid data in the input fields");
-            return;
-        }
+    public LiveData<String> getStatusMessage() {
+        return statusMessage;
+    }
 
+    public LiveData<List<Expense>> getExpenses() {
+        return expenses;
+    }
+
+    public void addExpense(String name, double amount, Category category, String date, String notes) {
+        Expense expense = new Expense(name, amount, category, date, notes);
+        repo.addExpense(expense, new ExpenseRepo.RepoCallback() {
+            @Override
+            public void onSuccess() {
+                statusMessage.postValue("Expense saved");
+                refreshExpenses(false);
+            }
+
+            @Override
+            public void onError(String error) {
+                statusMessage.postValue(error);
+            }
+        });
+    }
+
+    public void deleteExpense(String expenseId) {
+        repo.deleteExpense(expenseId, new ExpenseRepo.RepoCallback() {
+            @Override
+            public void onSuccess() {
+                statusMessage.postValue("Expense deleted");
+                refreshExpenses(false);
+            }
+
+            @Override
+            public void onError(String error) {
+                statusMessage.postValue(error);
+            }
+        });
+    }
+
+    public void refreshExpenses(boolean withSeed) {
+        if (withSeed) {
+            repo.seedIfEmpty(new ExpenseRepo.RepoCallback() {
+                @Override
+                public void onSuccess() {
+                    loadExpenses();
+                }
+
+                @Override
+                public void onError(String error) {
+                    loadExpenses();
+                }
+            });
+        } else {
+            loadExpenses();
+        }
+    }
+
+    private void loadExpenses() {
+        repo.fetchExpenses(new ExpenseRepo.ExpensesCallback() {
+            @Override
+            public void onSuccess(List<Expense> list) {
+                expenses.postValue(list);
+            }
+
+            @Override
+            public void onError(String error) {
+                statusMessage.postValue(error);
+            }
+        });
     }
 }
