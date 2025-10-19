@@ -42,6 +42,10 @@ public class Budget {
         this.name = name;
     }
 
+    public double getAmount() {
+        return amount;
+    }
+
     public double getLimit() {
         return limit;
     }
@@ -66,6 +70,10 @@ public class Budget {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     public String getFrequency() {

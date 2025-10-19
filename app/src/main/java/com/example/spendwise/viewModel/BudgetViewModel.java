@@ -16,6 +16,8 @@ public class BudgetViewModel extends ViewModel {
 
     private final MutableLiveData<String> calculationResult = new MutableLiveData<>();
     private final MutableLiveData<Double> calculatedValue = new MutableLiveData<>();
+    private final MutableLiveData<java.util.List<com.example.spendwise.model.Budget>> budgets = new MutableLiveData<>();
+    private final com.example.spendwise.repo.BudgetRepo budgetRepo = com.example.spendwise.repo.BudgetRepo.getInstance();
 
     public BudgetViewModel() {}
 
@@ -25,6 +27,26 @@ public class BudgetViewModel extends ViewModel {
 
     public LiveData<Double> getCalculatedValue() {
         return calculatedValue;
+    }
+
+    public LiveData<java.util.List<com.example.spendwise.model.Budget>> getBudgets() { return budgets; }
+
+    public void refreshBudgets(boolean withSeed) {
+        if (withSeed) {
+            budgetRepo.seedIfEmpty(new com.example.spendwise.repo.BudgetRepo.RepoCallback() {
+                @Override public void onSuccess() { loadBudgets(); }
+                @Override public void onError(String error) { loadBudgets(); }
+            });
+        } else {
+            loadBudgets();
+        }
+    }
+
+    private void loadBudgets() {
+        budgetRepo.fetchBudgets(new com.example.spendwise.repo.BudgetRepo.BudgetsCallback() {
+            @Override public void onSuccess(java.util.List<com.example.spendwise.model.Budget> list) { budgets.postValue(list); }
+            @Override public void onError(String error) { calculationResult.postValue(error); }
+        });
     }
 
     /**
