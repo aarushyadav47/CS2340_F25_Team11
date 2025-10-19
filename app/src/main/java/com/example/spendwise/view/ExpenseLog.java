@@ -2,7 +2,6 @@ package com.example.spendwise.view;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.ArrayAdapter;
 import androidx.lifecycle.ViewModelProvider;
 import android.view.View;
@@ -16,7 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 import android.app.DatePickerDialog;
-import com.example.spendwise.model.Category;
 
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -25,7 +23,7 @@ import com.example.spendwise.adapter.ExpenseAdapter;
 
 import com.example.spendwise.viewModel.ExpenseViewModel;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
+
 import android.widget.AutoCompleteTextView;
 import android.widget.Toast;
 
