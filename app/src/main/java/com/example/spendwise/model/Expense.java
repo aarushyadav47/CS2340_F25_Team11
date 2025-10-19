@@ -1,23 +1,29 @@
 package com.example.spendwise.model;
+import java.util.UUID;
 
-public enum Expense {
-    FOOD("Food"),
-    TRANSPORT("Transport"),
-    ENTERTAINMENT("Entertainment"),
-    BILLS("Bills"),
-    SHOPPING("Shopping"),
-    HEALTH("Health"),
-    OTHER("Other");
+public class Expense {
+    private String id;
+    private String name;
+    private double amount;
+    private Category category;
+    private String date;
+    private String notes;
 
-    private String displayName;
-
-    // Constructor
-    Expense(String displayName) {
-        this.displayName = displayName;
+    public Expense(String name, double amount, Category category, String date, String notes) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.amount = amount;
+        this.category = category;
+        this.date = date;
+        this.notes = notes;
     }
 
-    // Get the display name
-    public String getDisplayName() {
-        return displayName;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getName() { return name; }
+    public double getAmount() { return amount; }
+    public Category getCategory() { return category; }
+    public String getDate() { return date; }
+    public String getNotes() { return notes; }
 }
