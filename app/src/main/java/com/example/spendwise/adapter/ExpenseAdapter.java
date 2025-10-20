@@ -15,48 +15,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder> {
+    private List<Expense> expenses = new ArrayList<>();
+    private OnItemClickListener clickListener;
 
     public interface OnItemClickListener {
         void onItemClick(Expense expense);
     }
 
-    private final List<Expense> expenses = new ArrayList<>();
-    private OnItemClickListener onItemClickListener;
-
     public void setOnItemClickListener(OnItemClickListener listener) {
-        this.onItemClickListener = listener;
-    }
-
-    public void setExpenses(List<Expense> newExpenses) {
-        expenses.clear();
-        if (newExpenses != null)
-            expenses.addAll(newExpenses);
-        notifyDataSetChanged();
-    }
-
-    public Expense getExpenseAt(int position) {
-        return expenses.get(position);
+        this.clickListener = listener;
     }
 
     @NonNull
     @Override
     public ExpenseViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.expense_item, parent, false);
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.expense_item, parent, false);
         return new ExpenseViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ExpenseViewHolder holder, int position) {
-        Expense e = expenses.get(position);
-        holder.name.setText(e.getName());
-        holder.amount.setText(String.format("$%.2f", e.getAmount()));
-        holder.category.setText(e.getCategory().getDisplayName());
-        holder.date.setText(e.getDate());
-
-        holder.itemView.setOnClickListener(v -> {
-            if (onItemClickListener != null)
-                onItemClickListener.onItemClick(e);
-        });
+        Expense expense = expenses.get(position);
+        holder.bind(expense);
     }
 
     @Override
@@ -64,18 +45,41 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
         return expenses.size();
     }
 
-    static class ExpenseViewHolder extends RecyclerView.ViewHolder {
-        TextView name;
-        TextView amount;
-        TextView category;
-        TextView date;
+    public void setExpenses(List<Expense> expenses) {
+        this.expenses = expenses;
+        notifyDataSetChanged();
+    }
 
-        ExpenseViewHolder(@NonNull View itemView) {
+    public Expense getExpenseAt(int position) {
+        return expenses.get(position);
+    }
+
+    class ExpenseViewHolder extends RecyclerView.ViewHolder {
+        private TextView textViewName;
+        private TextView textViewAmount;
+        private TextView textViewCategory;
+        private TextView textViewDate;
+
+        public ExpenseViewHolder(@NonNull View itemView) {
             super(itemView);
-            name = itemView.findViewById(R.id.item_name);
-            amount = itemView.findViewById(R.id.item_amount);
-            category = itemView.findViewById(R.id.item_category);
-            date = itemView.findViewById(R.id.item_date);
+            textViewName = itemView.findViewById(R.id.text_view_name);
+            textViewAmount = itemView.findViewById(R.id.text_view_amount);
+            textViewCategory = itemView.findViewById(R.id.text_view_category);
+            textViewDate = itemView.findViewById(R.id.text_view_date);
+
+            itemView.setOnClickListener(v -> {
+                int position = getAdapterPosition();
+                if (clickListener != null && position != RecyclerView.NO_POSITION) {
+                    clickListener.onItemClick(expenses.get(position));
+                }
+            });
+        }
+
+        public void bind(Expense expense) {
+            textViewName.setText(expense.getName());
+            textViewAmount.setText(String.format(Locale.US, "$%.2f", expense.getAmount()));
+            textViewCategory.setText(expense.getCategory().getDisplayName());
+            textViewDate.setText(expense.getDate());
         }
     }
 }

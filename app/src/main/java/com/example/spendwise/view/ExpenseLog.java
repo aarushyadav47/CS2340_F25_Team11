@@ -2,6 +2,7 @@ package com.example.spendwise.view;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Button;
 import android.widget.ArrayAdapter;
 import androidx.lifecycle.ViewModelProvider;
 import android.view.View;
@@ -23,6 +24,17 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import com.example.spendwise.adapter.ExpenseAdapter;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
+import android.app.DatePickerDialog;
+import com.example.spendwise.model.Category;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import com.example.spendwise.adapter.ExpenseAdapter;
+
 import com.example.spendwise.viewModel.ExpenseViewModel;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -35,7 +47,6 @@ public class ExpenseLog extends AppCompatActivity {
     private ExpenselogBinding binding;
     private Calendar calendar = Calendar.getInstance();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
-    private SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,8 +56,8 @@ public class ExpenseLog extends AppCompatActivity {
         binding = ExpenselogBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Optional ViewModel setup
-        expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class); // Use the right view model
+        // ViewModel setup
+        expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class);
         binding.setLifecycleOwner(this);
 
         expenseViewModel.getStatusMessage().observe(this, msg -> {
@@ -55,7 +66,7 @@ public class ExpenseLog extends AppCompatActivity {
             }
         });
 
-        // Use findViewById for buttons
+        // Use findViewById for buttons and views
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
         View expenseLogNavigate = findViewById(R.id.expenseLog_navigate);
         View budgetNavigate = findViewById(R.id.budget_navigate);
@@ -64,7 +75,7 @@ public class ExpenseLog extends AppCompatActivity {
 
         View expenseLogForm = findViewById(R.id.form_Container);
         View expenseLogMsg = findViewById(R.id.expenseLog_msg);
-        RecyclerView expenseList = findViewById(R.id.expense_recycler_view);
+        View expenseRecycler = findViewById(R.id.expense_recycler_view);
 
         // Set click listeners using lambdas for the routing
         dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
@@ -77,25 +88,28 @@ public class ExpenseLog extends AppCompatActivity {
 
         chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
 
-        // Add Expense button - placeholder for future expense entry form
+        // Add Expense button
         View addExpenseButton = findViewById(R.id.add_expense_button);
         addExpenseButton.setOnClickListener(v -> {
+            clearForm();
             expenseLogForm.setVisibility(View.VISIBLE);
+            expenseRecycler.setVisibility(View.GONE);
             expenseLogMsg.setVisibility(View.GONE);
             expenseList.setVisibility(View.GONE);
         });
 
         setupDatePicker();
-
         setupRecyclerView();
 
-        String[] options = { "Food", "Transport", "Entertainment", "Bills", "Shopping", "Health", "Other" };
+        // Setup category dropdown
+        String[] options = {"Food", "Transport", "Entertainment", "Bills", "Health", "Shopping"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 R.layout.dropdown_item, options);
 
         AutoCompleteTextView dropdown = findViewById(R.id.categoryInput);
         dropdown.setAdapter(adapter);
 
+        // Create Expense button
         View createExpenseBtn = findViewById(R.id.create_Expense);
         createExpenseBtn.setOnClickListener(v -> {
             saveExpense();
@@ -122,7 +136,8 @@ public class ExpenseLog extends AppCompatActivity {
                     },
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
-                    calendar.get(Calendar.DAY_OF_MONTH));
+                    calendar.get(Calendar.DAY_OF_MONTH)
+            );
             datePickerDialog.show();
         });
     }
@@ -139,13 +154,7 @@ public class ExpenseLog extends AppCompatActivity {
         String name = expenseNameInput.getText().toString().trim();
         String amountStr = amountInput.getText().toString().trim();
         String categoryName = categoryInput.getText().toString().trim();
-        String dateDisplay = dateInput.getText().toString();
-        String date;
-        try {
-            date = isoDateFormat.format(dateFormat.parse(dateDisplay));
-        } catch (ParseException e) {
-            date = isoDateFormat.format(calendar.getTime());
-        }
+        String date = dateInput.getText().toString();
         String notes = notesInput.getText().toString().trim();
 
         // Validation
@@ -199,14 +208,14 @@ public class ExpenseLog extends AppCompatActivity {
         // Save to Firebase through ViewModel
         expenseViewModel.addExpense(name, amount, category, date, notes);
 
-        // Hide form and clear inputs
+        // Hide form, show RecyclerView
         View expenseLogForm = findViewById(R.id.form_Container);
-        expenseLogForm.setVisibility(View.GONE);
-
+        View expenseRecycler = findViewById(R.id.expense_recycler_view);
         View expenseLogMsg = findViewById(R.id.expenseLog_msg);
-        expenseLogMsg.setVisibility(View.VISIBLE);
-        RecyclerView expenseList = findViewById(R.id.expense_recycler_view);
-        expenseList.setVisibility(View.VISIBLE);
+
+        expenseLogForm.setVisibility(View.GONE);
+        expenseRecycler.setVisibility(View.VISIBLE);
+        expenseLogMsg.setVisibility(View.GONE);
 
         clearForm();
     }
@@ -228,6 +237,9 @@ public class ExpenseLog extends AppCompatActivity {
         expenseNameInput.setError(null);
         amountInput.setError(null);
         categoryInput.setError(null);
+
+        // Clear the tag (used for storing expense ID when editing)
+        expenseNameInput.setTag(null);
     }
 
     private void setupRecyclerView() {
@@ -240,15 +252,26 @@ public class ExpenseLog extends AppCompatActivity {
         // Observe expenses from Firebase
         expenseViewModel.getExpenses().observe(this, expenses -> {
             adapter.setExpenses(expenses);
+
+            // Show/hide message based on whether there are expenses
+            View expenseLogMsg = findViewById(R.id.expenseLog_msg);
+            if (expenses.isEmpty()) {
+                expenseLogMsg.setVisibility(View.VISIBLE);
+            } else {
+                expenseLogMsg.setVisibility(View.GONE);
+            }
         });
 
         // Click to edit expense
         adapter.setOnItemClickListener(expense -> {
             // Show the form with existing expense data
             View expenseLogForm = findViewById(R.id.form_Container);
+            View expenseRecycler = findViewById(R.id.expense_recycler_view);
+            View expenseLogMsg = findViewById(R.id.expenseLog_msg);
+
             expenseLogForm.setVisibility(View.VISIBLE);
-            findViewById(R.id.expenseLog_msg).setVisibility(View.GONE);
-            findViewById(R.id.expense_recycler_view).setVisibility(View.GONE);
+            expenseRecycler.setVisibility(View.GONE);
+            expenseLogMsg.setVisibility(View.GONE);
 
             // Populate form fields with expense data
             TextInputEditText expenseNameInput = findViewById(R.id.expenseNameInput);
@@ -260,29 +283,27 @@ public class ExpenseLog extends AppCompatActivity {
             expenseNameInput.setText(expense.getName());
             amountInput.setText(String.valueOf(expense.getAmount()));
             categoryInput.setText(expense.getCategory().getDisplayName(), false);
-            try {
-                dateInput.setText(dateFormat.format(isoDateFormat.parse(expense.getDate())));
-            } catch (ParseException e1) {
-                dateInput.setText(expense.getDate());
-            }
+            dateInput.setText(expense.getDate());
             notesInput.setText(expense.getNotes());
 
             // Store expense ID in a tag so you can update it later
             expenseNameInput.setTag(expense.getId());
+
+            // TODO: Change the Create button to Update button when editing
+            // You can do this by checking if the tag is not null
         });
 
-        // Optional: Swipe to delete
+        // Swipe to delete
         setupSwipeToDelete(recyclerView, adapter);
     }
 
-    // Optional: Add swipe to delete functionality
     private void setupSwipeToDelete(RecyclerView recyclerView, ExpenseAdapter adapter) {
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
             @Override
             public boolean onMove(RecyclerView recyclerView,
-                    RecyclerView.ViewHolder viewHolder,
-                    RecyclerView.ViewHolder target) {
+                                  RecyclerView.ViewHolder viewHolder,
+                                  RecyclerView.ViewHolder target) {
                 return false;
             }
 

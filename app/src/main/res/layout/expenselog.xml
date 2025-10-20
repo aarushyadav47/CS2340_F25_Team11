@@ -47,6 +47,15 @@
                 android:visibility="gone"
                 android:textSize="16sp" />
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/expense_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="8dp"
+                android:clipToPadding="false"
+                android:visibility="gone"/>
+
             <LinearLayout
                 android:id="@+id/form_Container"
                 android:layout_width="match_parent"
