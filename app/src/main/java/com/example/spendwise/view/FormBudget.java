@@ -83,17 +83,14 @@ public class FormBudget extends AppCompatActivity {
             }
 
             Budget newBudget = new Budget(name, amount, category, frequency, startDate);
-            BudgetRepo repo = new BudgetRepo();
+            BudgetRepo repo = BudgetRepo.getInstance();
 
-            repo.addBudget(newBudget, new BudgetRepo.OnBudgetAddedListener() {
-                @Override
-                public void onSuccess(String message) {
+            repo.addBudget(newBudget, new BudgetRepo.RepoCallback() {
+                @Override public void onSuccess() {
                     Toast.makeText(FormBudget.this, "Budget created!", Toast.LENGTH_SHORT).show();
                     finish();
                 }
-
-                @Override
-                public void onFailure(String error) {
+                @Override public void onError(String error) {
                     Toast.makeText(FormBudget.this, "Error: " + error, Toast.LENGTH_SHORT).show();
                 }
             });
