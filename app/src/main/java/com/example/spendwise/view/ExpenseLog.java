@@ -11,6 +11,18 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.ExpenselogBinding;
+import com.example.spendwise.model.Category;
+
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Locale;
+import android.app.DatePickerDialog;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import com.example.spendwise.adapter.ExpenseAdapter;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -25,7 +37,7 @@ import com.example.spendwise.adapter.ExpenseAdapter;
 
 import com.example.spendwise.viewModel.ExpenseViewModel;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
+
 import android.widget.AutoCompleteTextView;
 import android.widget.Toast;
 
@@ -66,25 +78,15 @@ public class ExpenseLog extends AppCompatActivity {
         View expenseRecycler = findViewById(R.id.expense_recycler_view);
 
         // Set click listeners using lambdas for the routing
-        dashboardNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Dashboard.class))
-        );
+        dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
 
-        expenseLogNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, ExpenseLog.class))
-        );
+        expenseLogNavigate.setOnClickListener(v -> startActivity(new Intent(this, ExpenseLog.class)));
 
-        budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Budget.class))
-        );
+        budgetNavigate.setOnClickListener(v -> startActivity(new Intent(this, Budget.class)));
 
-        savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircle.class))
-        );
+        savingCircleNavigate.setOnClickListener(v -> startActivity(new Intent(this, SavingCircle.class)));
 
-        chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class))
-        );
+        chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
 
         // Add Expense button
         View addExpenseButton = findViewById(R.id.add_expense_button);
@@ -93,6 +95,7 @@ public class ExpenseLog extends AppCompatActivity {
             expenseLogForm.setVisibility(View.VISIBLE);
             expenseRecycler.setVisibility(View.GONE);
             expenseLogMsg.setVisibility(View.GONE);
+            expenseList.setVisibility(View.GONE);
         });
 
         setupDatePicker();

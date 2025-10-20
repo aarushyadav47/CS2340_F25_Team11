@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -28,6 +30,8 @@
         <activity android:name="com.example.spendwise.view.Chatbot" />
         <activity android:name="com.example.spendwise.view.Budget" />
         <activity android:name="com.example.spendwise.view.SavingCircle" />
+        <activity android:name="com.example.spendwise.view.FormBudget" />
+        <activity android:name="com.example.spendwise.view.BudgetDetails" />
     </application>
 
 </manifest>

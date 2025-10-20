@@ -13,7 +13,6 @@ import com.example.spendwise.model.Expense;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder> {
     private List<Expense> expenses = new ArrayList<>();
