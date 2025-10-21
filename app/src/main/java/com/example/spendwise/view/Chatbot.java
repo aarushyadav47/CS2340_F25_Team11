@@ -41,7 +41,7 @@ public class Chatbot extends AppCompatActivity {
         );
 
         budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Budget.class))
+                startActivity(new Intent(this, Budgetlog.class))
         );
 
         savingCircleNavigate.setOnClickListener(v ->

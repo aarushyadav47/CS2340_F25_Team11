@@ -13,8 +13,10 @@ import com.example.spendwise.model.Expense;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder> {
+
     private List<Expense> expenses = new ArrayList<>();
     private OnItemClickListener clickListener;
 
@@ -55,6 +57,7 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
     }
 
     class ExpenseViewHolder extends RecyclerView.ViewHolder {
+
         private TextView textViewName;
         private TextView textViewAmount;
         private TextView textViewCategory;

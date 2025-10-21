@@ -1,94 +1,47 @@
 package com.example.spendwise.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.UUID;
 
 public class Budget {
-    private final double amount;
+    private String id;
     private String name;
-    private double limit;
-    private List<ExpenseRecord> expenses;
-    private String category;
-    private String frequency;
-    private String startDate;
+    private double amount;
+    private double originalAmount;
+    private Category category;
+    private String date;
+    private String freq;
 
-    public Budget(double amount, String name, double limit) {
-        this.amount = amount;
-        this.name = name;
-        this.limit = limit;
-        this.expenses = new ArrayList<>();
-        this.category = category;
-        this.frequency = frequency;
-        this.startDate = startDate;
-    }
+    public Budget() {}
 
-    public Budget(double amount) {
-        this.amount = amount;
-        this.expenses = new ArrayList<>();
-    }
-
-    public Budget(String name, double amount, String category, String frequency, String startDate) {
+    public Budget(String name, double amount, Category category, String date, String freq) {
+        this.id = UUID.randomUUID().toString();
         this.name = name;
         this.amount = amount;
+        this.originalAmount = amount;
         this.category = category;
-        this.frequency = frequency;
-        this.startDate = startDate;
+        this.date = date;
+        this.freq = freq;
     }
 
-    public String getName() {
-        return name;
-    }
-    public void setName(String name) {
+    public Budget(String name, double amount, double originalAmount, Category category, String date, String freq) {
+        this.id = UUID.randomUUID().toString();
         this.name = name;
-    }
-
-    public double getAmount() {
-        return amount;
-    }
-
-    public double getLimit() {
-        return limit;
-    }
-    public void setLimit(double limit) {
-        this.limit = limit;
-    }
-
-    public List<ExpenseRecord> getExpenses() {
-        return expenses;
-    }
-    public void addExpense(ExpenseRecord expense) {
-        if(expenses != null) expenses.add(expense);
-    }
-
-    public double getTotalSpent() {
-        return expenses.stream().mapToDouble(ExpenseRecord::getAmount).sum();
-    }
-
-    public double getRemaining() {
-        return limit - getTotalSpent();
-    }
-
-    public void setCategory(String category) {
+        this.amount = amount;
+        this.originalAmount = originalAmount;
         this.category = category;
+        this.date = date;
+        this.freq = freq;
     }
 
-    public String getCategory() {
-        return category;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getName() { return name; }
+    public double getAmount() { return amount; }
+    public double getOriginalAmount() { return originalAmount; } // ✅ new getter
+    public Category getCategory() { return category; }
+    public String getDate() { return date; }
+    public String getfreq() { return freq; }
 
-    public String getFrequency() {
-        return frequency;
-    }
-
-    public String getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(String startDate) {
-        this.startDate = startDate;
-    }
-
-    public void setFrequency(String frequency) {
-        this.frequency = frequency;
-    }
+    public void setAmount(double amount) { this.amount = amount; }
+    public void setOriginalAmount(double originalAmount) { this.originalAmount = originalAmount; } // ✅ new setter
 }
