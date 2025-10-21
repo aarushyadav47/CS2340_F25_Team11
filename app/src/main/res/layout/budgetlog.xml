@@ -13,11 +13,11 @@
 
         <!-- Title -->
         <TextView
-            android:id="@+id/expenseLog_title"
+            android:id="@+id/budgetLog_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:text="Expense Log"
+            android:text="Budget Log"
             android:textColor="#000000"
             android:textSize="32sp"
             android:textStyle="bold"
@@ -25,30 +25,30 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Placheolder UI -->
+        <!-- Main Content -->
         <FrameLayout
-            android:id="@+id/expenseLog_body"
+            android:id="@+id/budgetLog_body"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_margin="16dp"
             android:background="@android:color/white"
-            app:layout_constraintTop_toBottomOf="@id/expenseLog_title"
+            app:layout_constraintTop_toBottomOf="@id/budgetLog_title"
             app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
             <TextView
-                android:id="@+id/expenseLog_msg"
+                android:id="@+id/budgetLog_msg"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="Add an expense"
+                android:text="Add a budget"
                 android:textColor="#AAAAAA"
                 android:visibility="gone"
                 android:textSize="16sp" />
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/expense_recycler_view"
+                android:id="@+id/budget_recycler_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
@@ -68,7 +68,7 @@
                 android:visibility="gone">
 
                 <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/expenseNameInputLayout"
+                    android:id="@+id/budgetNameInputLayout"
                     android:layout_width="250dp"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
@@ -79,10 +79,10 @@
                     app:boxCornerRadiusBottomEnd="8dp">
 
                     <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/expenseNameInput"
+                        android:id="@+id/budgetNameInput"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Expense Name"
+                        android:hint="Budget Name"
                         android:inputType="text"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -130,6 +130,28 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/freqInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    app:boxBackgroundMode="outline"
+                    app:boxCornerRadiusTopStart="8dp"
+                    app:boxCornerRadiusTopEnd="8dp"
+                    app:boxCornerRadiusBottomStart="8dp"
+                    app:boxCornerRadiusBottomEnd="8dp"
+                    app:endIconMode="dropdown_menu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/freqInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Frequency"
+                        android:inputType="none"
+                        android:textSize="14sp"
+                        android:padding="16dp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/dateInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -151,30 +173,8 @@
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/notesInputLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="24dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/notesInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Notes"
-                        android:inputType="textMultiLine"
-                        android:minLines="2"
-                        android:gravity="top"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/create_Expense"
+                    android:id="@+id/create_Budget"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:text="Create"
@@ -240,13 +240,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_expense_log"
                     android:contentDescription="Expense Log"
-                    app:tint="#000000"/>
-
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="3dp"
-                    android:layout_marginTop="4dp"
-                    android:background="#000000"/>
+                    app:tint="#888888"/>
 
             </LinearLayout>
 
@@ -267,7 +261,13 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_budget"
                     android:contentDescription="Budgets"
-                    app:tint="#888888"/>
+                    app:tint="#000000"/>
+
+                <View
+                    android:layout_width="32dp"
+                    android:layout_height="3dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#000000"/>
 
             </LinearLayout>
 
@@ -315,18 +315,30 @@
 
         </LinearLayout>
 
-        <!-- Add Expense Button -->
+        <!-- Add Budget Button -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/add_expense_button"
+            android:id="@+id/add_budget_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="24dp"
             android:src="@android:drawable/ic_input_add"
-            android:contentDescription="Add Expense"
+            android:contentDescription="Add Budget"
             android:backgroundTint="#000000"
             app:tint="@android:color/white"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/expenseLog_title" />
+            app:layout_constraintTop_toBottomOf="@id/budgetLog_title" />
 
+        <!-- Budget Calculator Button -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/budget_calculator_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="24dp"
+            android:src="@android:drawable/ic_dialog_dialer"
+            android:contentDescription="Budget Calculator"
+            android:backgroundTint="#000000"
+            app:tint="@android:color/white"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/budgetLog_title" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

@@ -28,9 +28,8 @@
         <activity android:name="com.example.spendwise.view.Dashboard" />
         <activity android:name="com.example.spendwise.view.ExpenseLog" />
         <activity android:name="com.example.spendwise.view.Chatbot" />
-        <activity android:name="com.example.spendwise.view.Budget" />
+        <activity android:name="com.example.spendwise.view.Budgetlog" />
         <activity android:name="com.example.spendwise.view.SavingCircle" />
-        <activity android:name="com.example.spendwise.view.FormBudget" />
         <activity android:name="com.example.spendwise.view.BudgetDetails" />
     </application>
 
