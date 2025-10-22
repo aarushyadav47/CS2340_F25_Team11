@@ -19,11 +19,11 @@ public class BudgetDetails extends AppCompatActivity {
         String frequency = getIntent().getStringExtra("frequency");
         String startDate = getIntent().getStringExtra("startDate");
 
-        ((TextView)findViewById(R.id.detail_name)).setText(name);
-        ((TextView)findViewById(R.id.detail_amount)).setText(String.format("$%.2f", amount));
-        ((TextView)findViewById(R.id.detail_category)).setText(category);
-        ((TextView)findViewById(R.id.detail_frequency)).setText(frequency);
-        ((TextView)findViewById(R.id.detail_start_date)).setText(startDate);
+        ((TextView) findViewById(R.id.detail_name)).setText(name);
+        ((TextView) findViewById(R.id.detail_amount)).setText(String.format("$%.2f", amount));
+        ((TextView) findViewById(R.id.detail_category)).setText(category);
+        ((TextView) findViewById(R.id.detail_frequency)).setText(frequency);
+        ((TextView) findViewById(R.id.detail_start_date)).setText(startDate);
     }
 }
 

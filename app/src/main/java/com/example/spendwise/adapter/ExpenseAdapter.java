@@ -20,10 +20,6 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
     private List<Expense> expenses = new ArrayList<>();
     private OnItemClickListener clickListener;
 
-    public interface OnItemClickListener {
-        void onItemClick(Expense expense);
-    }
-
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.clickListener = listener;
     }
@@ -54,6 +50,10 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
 
     public Expense getExpenseAt(int position) {
         return expenses.get(position);
+    }
+
+    public interface OnItemClickListener {
+        void onItemClick(Expense expense);
     }
 
     class ExpenseViewHolder extends RecyclerView.ViewHolder {

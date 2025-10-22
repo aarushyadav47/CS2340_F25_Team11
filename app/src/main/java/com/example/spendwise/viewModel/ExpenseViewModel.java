@@ -39,7 +39,8 @@ public class ExpenseViewModel extends ViewModel {
         database = Firebase.getDatabase(); //gets it from package.json
         auth = FirebaseAuth.getInstance(); //gets user info
 
-        // Setups user specific path for the proper structure in database tree, and correct retrieval later
+        // Setups user specific path for the proper structure in database tree,
+        // and correct retrieval later
         setupUserExpensesReference();
         // Load expenses from Firebase when ViewModel is created (a function)
         loadExpensesFromFirebase();
@@ -51,7 +52,8 @@ public class ExpenseViewModel extends ViewModel {
         if (currentUser != null) {
             String uid = currentUser.getUid();
             // Path: users/{uid}/expenses
-            expensesRef = database.getReference("users").child(uid).child("expenses");
+            expensesRef = database.getReference("users").child(uid)
+                    .child("expenses");
             Log.d(TAG, "Expenses reference set for user: " + uid);
         } else {
             Log.e(TAG, "No user logged in!");
@@ -64,12 +66,15 @@ public class ExpenseViewModel extends ViewModel {
     }
 
     /*public void addExpense(Expense expense) {
-        expenses.getValue().add(expense);  // Add directly to the list by unpacking the mutable live data box
-        expenses.setValue(expenses.getValue());  // Tell LiveData to update UI and stuff (opens box and alerts everyone using it)
+        expenses.getValue().add(expense);
+        // Add directly to the list by unpacking the mutable live data box
+        expenses.setValue(expenses.getValue());
+        // Tell LiveData to update UI and stuff (opens box and alerts everyone using it)
     }*/
 
     // Add new expense to Firebase
-    public void addExpense(String name, double amount, Category category, String date, String notes) {
+    public void addExpense(String name, double amount, Category category,
+                           String date, String notes) {
         if (expensesRef == null) {
             Log.e(TAG, "expensesRef is null! Cannot add expense.");
             statusMessage.setValue("Error: User not logged in");
@@ -78,9 +83,12 @@ public class ExpenseViewModel extends ViewModel {
 
         Expense expense = new Expense(name, amount, category, date, notes);
         // Push to Firebase (auto-generates ID)
-        DatabaseReference newExpenseRef = expensesRef.push(); //creates a new child location in the database tree with unique id
-        String firebaseId = newExpenseRef.getKey(); //gets the key associated with the pointer ie /expenses/mkdfjos
-        expense.setId(firebaseId); //ensures the key in database and of object is aligned
+        // creates a new child location in the database tree with unique id
+        DatabaseReference newExpenseRef = expensesRef.push();
+        // gets the key associated with the pointer ie /expenses/mkdfjos
+        String firebaseId = newExpenseRef.getKey();
+        // ensures the key in database and of object is aligned
+        expense.setId(firebaseId);
 
         Log.d(TAG, "Adding expense to Firebase: " + expense);
 
@@ -92,7 +100,9 @@ public class ExpenseViewModel extends ViewModel {
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error adding expense", e);
                     statusMessage.setValue("Error: " + e.getMessage());
-                });//setsValue in that pointer location that holds no data with serialized (json formatted) data
+                });
+        // setsValue in that pointer location that holds no data
+        // with serialized (json formatted) data
     }
 
     public LiveData<String> getStatusMessage() {
@@ -100,7 +110,8 @@ public class ExpenseViewModel extends ViewModel {
     }
 
     // Update existing expense in Firebase
-    public void updateExpense(String id, String name, double amount, Category category, String date, String notes) {
+    public void updateExpense(String id, String name, double amount,
+                              Category category, String date, String notes) {
         Expense expense = new Expense(name, amount, category, date, notes);
         expense.setId(id);
 
@@ -126,16 +137,22 @@ public class ExpenseViewModel extends ViewModel {
                     try {
                         // Get the expense data and parse it correctly
                         String id = expenseSnapshot.getKey();
-                        String name = expenseSnapshot.child("name").getValue(String.class);
-                        Double amount = expenseSnapshot.child("amount").getValue(Double.class);
-                        String categoryStr = expenseSnapshot.child("category").getValue(String.class);
-                        String date = expenseSnapshot.child("date").getValue(String.class);
-                        String notes = expenseSnapshot.child("notes").getValue(String.class);
+                        String name = expenseSnapshot.child("name")
+                                .getValue(String.class);
+                        Double amount = expenseSnapshot.child("amount")
+                                .getValue(Double.class);
+                        String categoryStr = expenseSnapshot.child("category")
+                                .getValue(String.class);
+                        String date = expenseSnapshot.child("date")
+                                .getValue(String.class);
+                        String notes = expenseSnapshot.child("notes")
+                                .getValue(String.class);
 
                         // Create expense object
                         if (name != null && amount != null && categoryStr != null) {
                             Category category = Category.valueOf(categoryStr);
-                            Expense expense = new Expense(name, amount, category, date, notes != null ? notes : "");
+                            Expense expense = new Expense(name, amount, category,
+                                    date, notes != null ? notes : "");
                             expense.setId(id);
                             expenseList.add(expense);
                         }
@@ -145,13 +162,15 @@ public class ExpenseViewModel extends ViewModel {
                 }
 
                 expenses.setValue(expenseList);
-                Log.d(TAG, "Loaded " + expenseList.size() + " expenses from Firebase");
+                Log.d(TAG, "Loaded " + expenseList.size()
+                        + " expenses from Firebase");
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
                 Log.e(TAG, "Firebase error: " + error.getMessage());
-                statusMessage.setValue("Error loading expenses: " + error.getMessage());
+                statusMessage.setValue("Error loading expenses: "
+                        + error.getMessage());
             }
         });
     }

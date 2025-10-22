@@ -44,8 +44,10 @@ public class Dashboard extends AppCompatActivity {
 
 
     private Calendar currentSimulatedDate;
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
-    private SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy",
+            Locale.US);
+    private SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM/dd/yyyy",
+            Locale.US);
     private SharedPreferences preferences;
 
     private static final String PREFS_NAME = "SpendWisePrefs";
@@ -138,7 +140,8 @@ public class Dashboard extends AppCompatActivity {
                     saveSimulatedDate();
                     updateDateDisplay();
                     loadDashboardData(); // Refresh data with new date
-                    Toast.makeText(this, "Date updated! All time-based features will use this date.",
+                    Toast.makeText(this,
+                            "Date updated! All time-based features will use this date.",
                             Toast.LENGTH_LONG).show();
                 },
                 currentSimulatedDate.get(Calendar.YEAR),
@@ -193,11 +196,18 @@ public class Dashboard extends AppCompatActivity {
             // Already on dashboard
         });
 
-        expenseLogNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, ExpenseLog.class)));
-
-        budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Budgetlog.class)));
+        expenseLogNavigate.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ExpenseLog.class);
+            intent.putExtra("selected_date",
+                    shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
+        budgetNavigate.setOnClickListener(v -> {
+            Intent intent = new Intent(Dashboard.this, Budgetlog.class);
+            intent.putExtra("selected_date",
+                    shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
 
         savingCircleNavigate.setOnClickListener(v ->
                 startActivity(new Intent(this, SavingCircle.class)));
@@ -210,11 +220,19 @@ public class Dashboard extends AppCompatActivity {
         MaterialCardView addExpenseCard = findViewById(R.id.add_expense_card);
         MaterialCardView addBudgetCard = findViewById(R.id.add_budget_card);
 
-        addExpenseCard.setOnClickListener(v ->
-                startActivity(new Intent(this, ExpenseLog.class)));
+        addExpenseCard.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ExpenseLog.class);
+            intent.putExtra("selected_date",
+                    shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
 
-        addBudgetCard.setOnClickListener(v ->
-                startActivity(new Intent(this, Budgetlog.class)));
+        addBudgetCard.setOnClickListener(v -> {
+            Intent intent = new Intent(Dashboard.this, Budgetlog.class);
+            intent.putExtra("selected_date",
+                    shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
     }
 
     private void setupBudgetCards() {
@@ -261,13 +279,16 @@ public class Dashboard extends AppCompatActivity {
             }
 
             if (filteredBudgets.isEmpty()) {
-                Toast.makeText(this, "No " + frequency.toLowerCase() + " budgets found for this period",
+                Toast.makeText(this,
+                        "No " + frequency.toLowerCase()
+                                + " budgets found for this period",
                         Toast.LENGTH_SHORT).show();
                 recyclerView.setVisibility(View.GONE);
             } else {
                 remainingBudgetsAdapter.setBudgets(filteredBudgets);
-                Toast.makeText(this, "Showing " + filteredBudgets.size() + " " +
-                        frequency.toLowerCase() + " budget(s)", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Showing " + filteredBudgets.size() + " "
+                                + frequency.toLowerCase() + " budget(s)",
+                        Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -284,23 +305,31 @@ public class Dashboard extends AppCompatActivity {
                         boolean isActive = false;
 
                         // Weekly/Monthly budgets are always active; others check period
-                        if ("Weekly".equalsIgnoreCase(freq) || "Monthly".equalsIgnoreCase(freq)) {
+                        if ("Weekly".equalsIgnoreCase(freq)
+                                || "Monthly".equalsIgnoreCase(freq)) {
                             isActive = true;
                         } else if ("Yearly".equalsIgnoreCase(freq)) {
                             Date budgetDate = shortDateFormat.parse(budget.getDate());
-                            if (budgetDate != null) isActive = isInCurrentYear(budgetDate);
+                            if (budgetDate != null) {
+                                isActive = isInCurrentYear(budgetDate);
+                            }
                         } else if ("Daily".equalsIgnoreCase(freq)) {
                             Date budgetDate = shortDateFormat.parse(budget.getDate());
-                            if (budgetDate != null) isActive = isToday(budgetDate);
+                            if (budgetDate != null) {
+                                isActive = isToday(budgetDate);
+                            }
                         }
 
-                        if (!isActive) continue;
+                        if (!isActive) {
+                            continue;
+                        }
 
                         // Calculate total spent in the current period for this budget
                         double totalSpent = 0.0;
                         for (Expense expense : expenses) {
                             if (expense.getCategory().getDisplayName()
-                                    .equalsIgnoreCase(budget.getCategory().getDisplayName())) {
+                                    .equalsIgnoreCase(budget.getCategory()
+                                            .getDisplayName())) {
                                 Date expenseDate = shortDateFormat.parse(expense.getDate());
                                 if (expenseDate != null) {
                                     boolean inSamePeriod = false;
@@ -338,10 +367,13 @@ public class Dashboard extends AppCompatActivity {
                 }
 
                 if (remainingBudgets.isEmpty()) {
-                    Toast.makeText(this, "No active budgets for this period", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "No active budgets for this period",
+                            Toast.LENGTH_SHORT).show();
                 } else {
                     remainingBudgetsAdapter.setBudgets(remainingBudgets);
-                    Toast.makeText(this, "Showing remaining budgets for current period", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this,
+                            "Showing remaining budgets for current period",
+                            Toast.LENGTH_SHORT).show();
                 }
             });
         });
@@ -378,12 +410,14 @@ public class Dashboard extends AppCompatActivity {
         monthStart.set(Calendar.DAY_OF_MONTH, 1);
 
         Calendar monthEnd = (Calendar) currentSimulatedDate.clone();
-        monthEnd.set(Calendar.DAY_OF_MONTH, monthEnd.getActualMaximum(Calendar.DAY_OF_MONTH));
+        monthEnd.set(Calendar.DAY_OF_MONTH,
+                monthEnd.getActualMaximum(Calendar.DAY_OF_MONTH));
 
         // Load expenses and calculate totals
         expenseViewModel.getExpenses().observe(this, expenses -> {
             if (expenses != null) {
-                calculateAndDisplayTotals(expenses, weekStart, weekEnd, monthStart, monthEnd);
+                calculateAndDisplayTotals(expenses, weekStart, weekEnd,
+                        monthStart, monthEnd);
             }
         });
 
@@ -397,24 +431,18 @@ public class Dashboard extends AppCompatActivity {
 
     private void calculateAndDisplayTotals(List<Expense> expenses,
                                            Calendar weekStart, Calendar weekEnd,
-                                           Calendar monthStart, Calendar monthEnd) {
+                                           Calendar monthStart,
+                                           Calendar monthEnd) {
         double totalSpent = 0.0;
-        double weeklySpent = 0.0;
-        double monthlySpent = 0.0;
 
         for (Expense expense : expenses) {
             try {
                 Date expenseDate = shortDateFormat.parse(expense.getDate());
                 if (expenseDate != null) {
-                    // Total spent in current month
-                    if (isDateInRange(expenseDate, monthStart.getTime(), monthEnd.getTime())) {
+                    // Total spent in current month (for the main spending card)
+                    if (isDateInRange(expenseDate, monthStart.getTime(),
+                            monthEnd.getTime())) {
                         totalSpent += expense.getAmount();
-                        monthlySpent += expense.getAmount();
-                    }
-
-                    // Weekly spent
-                    if (isDateInRange(expenseDate, weekStart.getTime(), weekEnd.getTime())) {
-                        weeklySpent += expense.getAmount();
                     }
                 }
             } catch (ParseException e) {
@@ -422,51 +450,117 @@ public class Dashboard extends AppCompatActivity {
             }
         }
 
-        // Update UI
+        // Update total spent UI (main card at top)
         TextView totalSpentText = findViewById(R.id.total_spent_amount);
         totalSpentText.setText(String.format(Locale.US, "$%.2f", totalSpent));
 
-        // Calculate weekly and monthly budgets
-        updateBudgetDisplay(weeklySpent, monthlySpent);
+        // Calculate weekly and monthly budgets (now with category filtering)
+        updateBudgetDisplay();
     }
 
-    private void updateBudgetDisplay(double weeklySpent, double monthlySpent) {
+    private void updateBudgetDisplay() {
         budgetViewModel.getBudgets().observe(this, budgets -> {
-            double totalWeeklyBudget = 0.0;
-            double totalMonthlyBudget = 0.0;
+            expenseViewModel.getExpenses().observe(this, expenses -> {
 
-            for (Budget budget : budgets) {
-                String freq = budget.getfreq();
-                if ("Weekly".equalsIgnoreCase(freq)) {
-                    totalWeeklyBudget += budget.getAmount();
-                } else if ("Monthly".equalsIgnoreCase(freq)) {
-                    totalMonthlyBudget += budget.getAmount();
+                // Track which categories have active budgets
+                Map<String, Double> weeklyBudgets = new HashMap<>();
+                Map<String, Double> monthlyBudgets = new HashMap<>();
+
+                // Collect all active budgets per frequency
+                for (Budget budget : budgets) {
+                    try {
+                        Date budgetDate = shortDateFormat.parse(budget.getDate());
+                        if (budgetDate == null) {
+                            continue;
+                        }
+
+                        String categoryName = budget.getCategory().getDisplayName();
+                        String freq = budget.getfreq();
+
+                        if ("Weekly".equalsIgnoreCase(freq)
+                                && isInCurrentWeek(budgetDate)) {
+                            weeklyBudgets.put(categoryName,
+                                    weeklyBudgets.getOrDefault(categoryName, 0.0)
+                                            + budget.getAmount());
+                        } else if ("Monthly".equalsIgnoreCase(freq)
+                                && isInCurrentMonth(budgetDate)) {
+                            monthlyBudgets.put(categoryName,
+                                    monthlyBudgets.getOrDefault(categoryName, 0.0)
+                                            + budget.getAmount());
+                        }
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
 
-            // Calculate remaining amounts
-            double weeklyRemaining = totalWeeklyBudget - weeklySpent;
-            double monthlyRemaining = totalMonthlyBudget - monthlySpent;
+                // Calculate spent amounts only for categories with budgets
+                double totalWeeklySpent = 0.0;
+                double totalMonthlySpent = 0.0;
 
-            // Update weekly budget card
-            TextView weeklyBudgetText = findViewById(R.id.weekly_budget_amount);
-            weeklyBudgetText.setText(String.format(Locale.US, "$%.2f",
-                    Math.max(0, weeklyRemaining)));
-            if (weeklyRemaining < 0) {
-                weeklyBudgetText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-            } else {
-                weeklyBudgetText.setTextColor(getResources().getColor(android.R.color.black));
-            }
+                for (Expense expense : expenses) {
+                    try {
+                        Date expenseDate = shortDateFormat.parse(expense.getDate());
+                        if (expenseDate == null) {
+                            continue;
+                        }
 
-            // Update monthly budget card
-            TextView monthlyBudgetText = findViewById(R.id.monthly_budget_amount);
-            monthlyBudgetText.setText(String.format(Locale.US, "$%.2f",
-                    Math.max(0, monthlyRemaining)));
-            if (monthlyRemaining < 0) {
-                monthlyBudgetText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-            } else {
-                monthlyBudgetText.setTextColor(getResources().getColor(android.R.color.black));
-            }
+                        String categoryName = expense.getCategory().getDisplayName();
+
+                        // Only count weekly expenses if category has a weekly budget
+                        if (isInCurrentWeek(expenseDate)
+                                && weeklyBudgets.containsKey(categoryName)) {
+                            totalWeeklySpent += expense.getAmount();
+                        }
+
+                        // Only count monthly expenses if category has a monthly budget
+                        if (isInCurrentMonth(expenseDate)
+                                && monthlyBudgets.containsKey(categoryName)) {
+                            totalMonthlySpent += expense.getAmount();
+                        }
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // Calculate total budgets
+                double totalWeeklyBudget = 0.0;
+                double totalMonthlyBudget = 0.0;
+
+                for (double amount : weeklyBudgets.values()) {
+                    totalWeeklyBudget += amount;
+                }
+                for (double amount : monthlyBudgets.values()) {
+                    totalMonthlyBudget += amount;
+                }
+
+                // Calculate remaining amounts
+                double weeklyRemaining = totalWeeklyBudget - totalWeeklySpent;
+                double monthlyRemaining = totalMonthlyBudget - totalMonthlySpent;
+
+                // Update weekly budget card
+                TextView weeklyBudgetText = findViewById(R.id.weekly_budget_amount);
+                weeklyBudgetText.setText(String.format(Locale.US, "$%.2f",
+                        Math.max(0, weeklyRemaining)));
+                if (weeklyRemaining < 0) {
+                    weeklyBudgetText.setTextColor(getResources()
+                            .getColor(android.R.color.holo_red_dark));
+                } else {
+                    weeklyBudgetText.setTextColor(getResources()
+                            .getColor(android.R.color.black));
+                }
+
+                // Update monthly budget card
+                TextView monthlyBudgetText = findViewById(R.id.monthly_budget_amount);
+                monthlyBudgetText.setText(String.format(Locale.US, "$%.2f",
+                        Math.max(0, monthlyRemaining)));
+                if (monthlyRemaining < 0) {
+                    monthlyBudgetText.setTextColor(getResources()
+                            .getColor(android.R.color.holo_red_dark));
+                } else {
+                    monthlyBudgetText.setTextColor(getResources()
+                            .getColor(android.R.color.black));
+                }
+            });
         });
     }
 
@@ -499,7 +593,8 @@ public class Dashboard extends AppCompatActivity {
             if (isInPeriod) {
                 String category = budget.getCategory().getDisplayName();
                 categoryBudgets.put(category,
-                        categoryBudgets.getOrDefault(category, 0.0) + budget.getAmount());
+                        categoryBudgets.getOrDefault(category, 0.0)
+                                + budget.getAmount());
             }
         }
 
@@ -509,7 +604,8 @@ public class Dashboard extends AppCompatActivity {
                 for (Expense expense : expenses) {
                     String category = expense.getCategory().getDisplayName();
                     categorySpent.put(category,
-                            categorySpent.getOrDefault(category, 0.0) + expense.getAmount());
+                            categorySpent.getOrDefault(category, 0.0)
+                                    + expense.getAmount());
                 }
             }
         });
@@ -533,8 +629,9 @@ public class Dashboard extends AppCompatActivity {
         Calendar dateCalendar = Calendar.getInstance();
         dateCalendar.setTime(date);
 
-        return dateCalendar.get(Calendar.YEAR) == currentSimulatedDate.get(Calendar.YEAR) &&
-                dateCalendar.get(Calendar.MONTH) == currentSimulatedDate.get(Calendar.MONTH);
+        return dateCalendar.get(Calendar.YEAR) == currentSimulatedDate.get(Calendar.YEAR)
+                && dateCalendar.get(Calendar.MONTH)
+                == currentSimulatedDate.get(Calendar.MONTH);
     }
 
     private boolean isInCurrentYear(Date date) {
@@ -548,9 +645,11 @@ public class Dashboard extends AppCompatActivity {
         Calendar dateCalendar = Calendar.getInstance();
         dateCalendar.setTime(date);
 
-        return dateCalendar.get(Calendar.YEAR) == currentSimulatedDate.get(Calendar.YEAR) &&
-                dateCalendar.get(Calendar.MONTH) == currentSimulatedDate.get(Calendar.MONTH) &&
-                dateCalendar.get(Calendar.DAY_OF_MONTH) == currentSimulatedDate.get(Calendar.DAY_OF_MONTH);
+        return dateCalendar.get(Calendar.YEAR) == currentSimulatedDate.get(Calendar.YEAR)
+                && dateCalendar.get(Calendar.MONTH)
+                == currentSimulatedDate.get(Calendar.MONTH)
+                && dateCalendar.get(Calendar.DAY_OF_MONTH)
+                == currentSimulatedDate.get(Calendar.DAY_OF_MONTH);
     }
 
     @Override
