@@ -43,7 +43,6 @@ public class ExpenseLog extends AppCompatActivity {
     private Calendar calendar = Calendar.getInstance();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
 
-    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -55,13 +54,27 @@ public class ExpenseLog extends AppCompatActivity {
         expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class);
         binding.setLifecycleOwner(this);
 
+        // Receive Dashboard-selected date
+        Intent intent = getIntent();
+        String dashboardDate = intent.getStringExtra("selected_date");
+        if (dashboardDate != null && !dashboardDate.isEmpty()) {
+            try {
+                Date date = dateFormat.parse(dashboardDate);
+                calendar.setTime(date);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        }
+
+        setupDatePicker();
+
+        // Rest of your initialization...
         expenseViewModel.getStatusMessage().observe(this, msg -> {
             if (msg != null && !msg.isEmpty()) {
                 Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
             }
         });
 
-        // Use findViewById for buttons and views
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
         View expenseLogNavigate = findViewById(R.id.expenseLog_navigate);
         View budgetNavigate = findViewById(R.id.budget_navigate);
@@ -72,15 +85,20 @@ public class ExpenseLog extends AppCompatActivity {
         View expenseLogMsg = findViewById(R.id.expenseLog_msg);
         View expenseRecycler = findViewById(R.id.expense_recycler_view);
 
-        // Set click listeners using lambdas for the routing
         dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
+        findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
+            Intent expenseIntent = new Intent(this, ExpenseLog.class);
+            expenseIntent.putExtra("selected_date", dashboardDate);
+            startActivity(expenseIntent);
+        });
 
-        expenseLogNavigate.setOnClickListener(v -> startActivity(new Intent(this, ExpenseLog.class)));
-
-        budgetNavigate.setOnClickListener(v -> startActivity(new Intent(this, Budgetlog.class)));
-
-        savingCircleNavigate.setOnClickListener(v -> startActivity(new Intent(this, SavingCircle.class)));
-
+        findViewById(R.id.budget_navigate).setOnClickListener(v -> {
+            Intent budgetIntent = new Intent(this, Budgetlog.class);
+            budgetIntent.putExtra("selected_date", dashboardDate);
+            startActivity(budgetIntent);
+        });
+        savingCircleNavigate.setOnClickListener(v -> startActivity(
+                new Intent(this, SavingCircle.class)));
         chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
 
         // Add Expense button
@@ -91,36 +109,29 @@ public class ExpenseLog extends AppCompatActivity {
             expenseRecycler.setVisibility(View.GONE);
             expenseLogMsg.setVisibility(View.GONE);
         });
-
-        setupDatePicker();
         setupRecyclerView();
 
-        // Setup category dropdown
-        String[] options = {"Food", "Transport", "Entertainment", "Bills", "Health", "Shopping", "Other"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                R.layout.dropdown_item, options);
-
+        // Category dropdown setup...
+        String[] options = {"Food", "Transport", "Entertainment",
+                            "Bills", "Health", "Shopping", "Other"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.dropdown_item, options);
         AutoCompleteTextView dropdown = findViewById(R.id.categoryInput);
         dropdown.setAdapter(adapter);
 
         // Create Expense button
         View createExpenseBtn = findViewById(R.id.create_Expense);
-        createExpenseBtn.setOnClickListener(v -> {
-            saveExpense();
-        });
+        createExpenseBtn.setOnClickListener(v -> saveExpense());
     }
 
     private void setupDatePicker() {
         TextInputEditText dateInput = findViewById(R.id.dateInput);
 
-        // Set today's date as default
+        // Initialize with dashboard date
         dateInput.setText(dateFormat.format(calendar.getTime()));
 
-        // Make it non-editable but clickable
         dateInput.setFocusable(false);
         dateInput.setClickable(true);
 
-        // Show date picker on click
         dateInput.setOnClickListener(v -> {
             DatePickerDialog datePickerDialog = new DatePickerDialog(
                     this,
@@ -224,7 +235,7 @@ public class ExpenseLog extends AppCompatActivity {
         expenseNameInput.setText("");
         amountInput.setText("");
         categoryInput.setText("");
-        dateInput.setText(dateFormat.format(calendar.getTime())); // Reset to today
+        dateInput.setText(dateFormat.format(calendar.getTime())); // dashboard date
         notesInput.setText("");
 
         // Clear any errors

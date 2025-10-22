@@ -51,20 +51,23 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.ViewHolder
         double remaining = budget.getAmount();
         double original = budget.getOriginalAmount();
 
-        holder.nameText.setText(budget.getName());
-        holder.categoryText.setText(
+        holder.getNameText().setText(budget.getName());
+        holder.getCategoryText().setText(
                 budget.getCategory().getDisplayName() + " · " + budget.getfreq()
         );
-        holder.amountText.setText(String.format(Locale.US, "$%.2f", remaining));
-        holder.dateText.setText(budget.getDate());
+        holder.getAmountText().setText(String.format(Locale.US, "$%.2f", remaining));
+        holder.getDateText().setText(budget.getDate());
 
         // Color logic based on remaining amount
         if (remaining < 0) {
-            holder.amountText.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), android.R.color.holo_red_dark));
+            holder.getAmountText().setTextColor(ContextCompat.getColor(
+                    holder.itemView.getContext(), android.R.color.holo_red_dark));
         } else if (remaining <= 0.3 * original) {
-            holder.amountText.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), android.R.color.holo_orange_light));
+            holder.getAmountText().setTextColor(
+                    ContextCompat.getColor(holder.itemView.getContext(),
+                            android.R.color.holo_orange_light));
         } else {
-            holder.amountText.setTextColor(Color.parseColor("#4CAF50"));
+            holder.getAmountText().setTextColor(Color.parseColor("#4CAF50"));
         }
     }
 
@@ -73,11 +76,17 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.ViewHolder
         return budgets != null ? budgets.size() : 0;
     }
 
+    // Optional helper if you want to update the list dynamically
+    public void setBudgets(List<Budget> newBudgets) {
+        this.budgets = newBudgets;
+        notifyDataSetChanged();
+    }
+
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView nameText;
-        TextView categoryText;
-        TextView amountText;
-        TextView dateText;
+        private TextView nameText;
+        private TextView categoryText;
+        private TextView amountText;
+        private TextView dateText;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -86,11 +95,21 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.ViewHolder
             amountText = itemView.findViewById(R.id.text_view_budget_amount);
             dateText = itemView.findViewById(R.id.text_view_budget_date);
         }
-    }
 
-    // Optional helper if you want to update the list dynamically
-    public void setBudgets(List<Budget> newBudgets) {
-        this.budgets = newBudgets;
-        notifyDataSetChanged();
+        public TextView getNameText() {
+            return nameText;
+        }
+
+        public TextView getCategoryText() {
+            return categoryText;
+        }
+
+        public TextView getAmountText() {
+            return amountText;
+        }
+
+        public TextView getDateText() {
+            return dateText;
+        }
     }
 }

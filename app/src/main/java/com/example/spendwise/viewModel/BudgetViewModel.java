@@ -52,11 +52,13 @@ public class BudgetViewModel extends ViewModel {
                             String id = budgetSnapshot.getKey();
                             String name = budgetSnapshot.child("name").getValue(String.class);
                             Double amount = budgetSnapshot.child("amount").getValue(Double.class);
-                            String categoryStr = budgetSnapshot.child("category").getValue(String.class);
+                            String categoryStr = budgetSnapshot.child("category")
+                                    .getValue(String.class);
                             String date = budgetSnapshot.child("date").getValue(String.class);
                             String freq = budgetSnapshot.child("freq").getValue(String.class);
 
-                            if (name != null && amount != null && categoryStr != null && date != null && freq != null) {
+                            if (name != null && amount != null && categoryStr != null
+                                    && date != null && freq != null) {
                                 try {
                                     Category category = Category.valueOf(categoryStr);
                                     Budget budget = new Budget(name, amount, category, date, freq);

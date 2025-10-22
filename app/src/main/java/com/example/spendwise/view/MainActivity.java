@@ -24,12 +24,13 @@ public class MainActivity extends AppCompatActivity {
 
         //Binding viewmodel to the layout
         // binding.setVariable(BR.viewModel, viewModel);
-        // binding.setLifecycleOwner(this); //the viewmodel is binded by this file - not destroyed by rotations
+        // binding.setLifecycleOwner(this);
+        // the viewmodel is binded by this file - not destroyed by rotations
 
         Button openBtn = findViewById(R.id.start_button);
         openBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick (View v){
+            public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, Login.class);
                 startActivity(intent);
             }
@@ -42,7 +43,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         Button dashboard = findViewById(R.id.dashboard_link_button);
-        dashboard.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, Dashboard.class)));
+        dashboard.setOnClickListener(v -> startActivity(
+                new Intent(MainActivity.this, Dashboard.class)));
 
     }
 }
