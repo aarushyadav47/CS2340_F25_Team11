@@ -209,8 +209,12 @@ public class Dashboard extends AppCompatActivity {
             startActivity(intent);
         });
 
-        savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircle.class)));
+        savingCircleNavigate.setOnClickListener(v -> {
+            Intent intent = new Intent(Dashboard.this, SavingCircle.class);
+            intent.putExtra("selected_date",
+                    shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
 
         chatbotNavigate.setOnClickListener(v ->
                 startActivity(new Intent(this, Chatbot.class)));

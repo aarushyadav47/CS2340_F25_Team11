@@ -75,31 +75,12 @@ public class ExpenseLog extends AppCompatActivity {
             }
         });
 
-        View dashboardNavigate = findViewById(R.id.dashboard_navigate);
-        View expenseLogNavigate = findViewById(R.id.expenseLog_navigate);
-        View budgetNavigate = findViewById(R.id.budget_navigate);
-        View savingCircleNavigate = findViewById(R.id.savingCircle_navigate);
-        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
+        setupNavBar(dashboardDate);
+
 
         View expenseLogForm = findViewById(R.id.form_Container);
         View expenseLogMsg = findViewById(R.id.expenseLog_msg);
         View expenseRecycler = findViewById(R.id.expense_recycler_view);
-
-        dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
-        findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
-            Intent expenseIntent = new Intent(this, ExpenseLog.class);
-            expenseIntent.putExtra("selected_date", dashboardDate);
-            startActivity(expenseIntent);
-        });
-
-        findViewById(R.id.budget_navigate).setOnClickListener(v -> {
-            Intent budgetIntent = new Intent(this, Budgetlog.class);
-            budgetIntent.putExtra("selected_date", dashboardDate);
-            startActivity(budgetIntent);
-        });
-        savingCircleNavigate.setOnClickListener(v -> startActivity(
-                new Intent(this, SavingCircle.class)));
-        chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
 
         // Add Expense button
         View addExpenseButton = findViewById(R.id.add_expense_button);
@@ -285,6 +266,29 @@ public class ExpenseLog extends AppCompatActivity {
 
         // Swipe to delete
         setupSwipeToDelete(recyclerView, adapter);
+    }
+
+    private void setupNavBar(String dashboardDate) {
+        View dashboardNavigate = findViewById(R.id.dashboard_navigate);
+        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
+
+        dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
+        findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
+            Intent expenseIntent = new Intent(this, ExpenseLog.class);
+            expenseIntent.putExtra("selected_date", dashboardDate);
+            startActivity(expenseIntent);
+        });
+        findViewById(R.id.budget_navigate).setOnClickListener(v -> {
+            Intent budgetIntent = new Intent(this, Budgetlog.class);
+            budgetIntent.putExtra("selected_date", dashboardDate);
+            startActivity(budgetIntent);
+        });
+        findViewById(R.id.savingCircle_navigate).setOnClickListener(v -> {
+            Intent savingIntent = new Intent(this, SavingCircle.class);
+            savingIntent.putExtra("selected_date", dashboardDate);
+            startActivity(savingIntent);
+        });
+        chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
     }
 
     private void setupSwipeToDelete(RecyclerView recyclerView, ExpenseAdapter adapter) {
