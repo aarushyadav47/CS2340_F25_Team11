@@ -161,14 +161,12 @@ public class SavingCircleViewModel extends ViewModel {
                         if (groupName != null && creatorEmail != null && challengeTitle != null
                                 && goalAmount != null && frequency != null) {
                             SavingCircle savingCircle = new SavingCircle(
-                                    id,
                                     groupName,
                                     creatorEmail,
                                     challengeTitle,
                                     goalAmount,
                                     frequency,
-                                    notes != null ? notes : "",
-                                    createdAt != null ? createdAt : System.currentTimeMillis()
+                                    notes != null ? notes : ""
                             );
                             savingCircleList.add(savingCircle);
                         }

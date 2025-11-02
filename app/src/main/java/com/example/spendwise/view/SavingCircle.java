@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.spendwise.R;
 import com.example.spendwise.adapter.SavingCircleAdapter;
 import com.example.spendwise.databinding.SavingcircleBinding;
+import com.example.spendwise.viewModel.SavingCircleViewModel;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -43,7 +44,7 @@ public class SavingCircle extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         // ViewModel setup
-        SavingCircleViewModel = new ViewModelProvider(this).get(SavingCircleViewModel.class);
+        savingCircleViewModel = new ViewModelProvider(this).get(SavingCircleViewModel.class);
         binding.setLifecycleOwner(this);
 
         // Receive Dashboard-selected date
