@@ -10,12 +10,12 @@ public class SavingCircleMember {
     public SavingCircleMember() {
     }
 
-    // Constructor - currentAmount starts equal to personalAllocation
-    public SavingCircleMember(String email, double personalAllocation) {
+    // UPDATED: Constructor now accepts joinedAt timestamp parameter
+    public SavingCircleMember(String email, double personalAllocation, long joinedAt) {
         this.email = email;
         this.personalAllocation = personalAllocation;
         this.currentAmount = personalAllocation;  // START WITH THE FULL ALLOCATION
-        this.joinedAt = System.currentTimeMillis();
+        this.joinedAt = joinedAt; // Use the passed timestamp instead of System.currentTimeMillis()
     }
 
     // Getters

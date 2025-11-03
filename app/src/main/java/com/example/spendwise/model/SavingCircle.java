@@ -16,9 +16,9 @@ public class SavingCircle {
     public SavingCircle() {
     }
 
-    // Main constructor
+    // UPDATED: Constructor now accepts createdAt timestamp parameter
     public SavingCircle(String groupName, String creatorEmail, String challengeTitle,
-                        double goalAmount, String frequency, String notes) {
+                        double goalAmount, String frequency, String notes, long createdAt) {
         this.id = UUID.randomUUID().toString();
         this.groupName = groupName;
         this.creatorEmail = creatorEmail;
@@ -26,7 +26,7 @@ public class SavingCircle {
         this.goalAmount = goalAmount;
         this.frequency = frequency;
         this.notes = notes;
-        this.createdAt = System.currentTimeMillis();
+        this.createdAt = createdAt; // Use the passed timestamp instead of System.currentTimeMillis()
     }
 
     // Getters

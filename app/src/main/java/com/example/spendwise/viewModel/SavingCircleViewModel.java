@@ -91,17 +91,20 @@ public class SavingCircleViewModel extends ViewModel {
     }
 
     // UPDATED: Add new saving circle to Firebase AND add creator as first member
+    // Now accepts dashboardTimestamp parameter
     public void addSavingCircle(String groupName, String creatorEmail, String challengeTitle,
                                 double goalAmount, String frequency, String notes,
-                                double personalAllocation) {
+                                double personalAllocation, long dashboardTimestamp) {
         if (savingCirclesRef == null) {
             Log.e(TAG, "savingCirclesRef is null! Cannot add saving circle.");
             statusMessage.setValue("Error: User not logged in");
             return;
         }
 
+        // UPDATED: Pass dashboardTimestamp to SavingCircle constructor
         SavingCircle savingCircle = new SavingCircle(groupName, creatorEmail, challengeTitle,
-                goalAmount, frequency, notes);
+                goalAmount, frequency, notes, dashboardTimestamp);
+
         // Push to Firebase (auto-generates ID)
         DatabaseReference newSavingCircleRef = savingCirclesRef.push();
         String firebaseId = newSavingCircleRef.getKey();
@@ -113,8 +116,8 @@ public class SavingCircleViewModel extends ViewModel {
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "Saving circle added successfully: " + savingCircle);
 
-                    // Now add the creator as the first member
-                    addMemberToCircle(firebaseId, creatorEmail, personalAllocation);
+                    // Now add the creator as the first member with dashboardTimestamp
+                    addMemberToCircle(firebaseId, creatorEmail, personalAllocation, dashboardTimestamp);
 
                     statusMessage.setValue("Saving circle created!");
                 })
@@ -124,14 +127,15 @@ public class SavingCircleViewModel extends ViewModel {
                 });
     }
 
-    // NEW: Add a member to a saving circle
-    public void addMemberToCircle(String circleId, String memberEmail, double personalAllocation) {
+    // UPDATED: Add a member to a saving circle with custom timestamp
+    public void addMemberToCircle(String circleId, String memberEmail, double personalAllocation, long joinTimestamp) {
         if (savingCirclesRef == null) {
             Log.e(TAG, "savingCirclesRef is null!");
             return;
         }
 
-        SavingCircleMember member = new SavingCircleMember(memberEmail, personalAllocation);
+        // UPDATED: Pass joinTimestamp to SavingCircleMember constructor
+        SavingCircleMember member = new SavingCircleMember(memberEmail, personalAllocation, joinTimestamp);
 
         // Path: users/{uid}/savingCircles/{circleId}/members/{memberEmail-sanitized}
         // Sanitize email because Firebase keys can't contain . or @
@@ -255,14 +259,14 @@ public class SavingCircleViewModel extends ViewModel {
     // UPDATED: Update existing saving circle in Firebase
     public void updateSavingCircle(String id, String groupName, String creatorEmail,
                                    String challengeTitle, double goalAmount,
-                                   String frequency, String notes) {
+                                   String frequency, String notes, long createdAtTimestamp) {
         if (savingCirclesRef == null) {
             statusMessage.setValue("User not authenticated");
             return;
         }
 
         SavingCircle savingCircle = new SavingCircle(groupName, creatorEmail, challengeTitle,
-                goalAmount, frequency, notes);
+                goalAmount, frequency, notes, createdAtTimestamp);
         savingCircle.setId(id);
 
         savingCirclesRef.child(id).setValue(savingCircle)
@@ -316,7 +320,8 @@ public class SavingCircleViewModel extends ViewModel {
                                     challengeTitle,
                                     goalAmount,
                                     frequency,
-                                    notes != null ? notes : ""
+                                    notes != null ? notes : "",
+                                    createdAt != null ? createdAt : System.currentTimeMillis()
                             );
                             savingCircle.setId(id);
                             savingCircleList.add(savingCircle);

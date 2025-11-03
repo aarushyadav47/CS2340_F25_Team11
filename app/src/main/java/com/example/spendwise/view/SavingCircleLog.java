@@ -30,6 +30,7 @@ public class SavingCircleLog extends AppCompatActivity {
     private SavingCircleViewModel savingCircleViewModel;
     private Calendar calendar = Calendar.getInstance();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    private long dashboardTimestamp; // Store dashboard date as timestamp
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,9 +51,13 @@ public class SavingCircleLog extends AppCompatActivity {
             try {
                 Date date = dateFormat.parse(dashboardDate);
                 calendar.setTime(date);
+                dashboardTimestamp = date.getTime(); // Convert to timestamp
             } catch (ParseException e) {
                 e.printStackTrace();
+                dashboardTimestamp = System.currentTimeMillis(); // Fallback to current time
             }
+        } else {
+            dashboardTimestamp = System.currentTimeMillis(); // Fallback to current time
         }
 
         setupNavBar(dashboardDate);
@@ -213,9 +218,9 @@ public class SavingCircleLog extends AppCompatActivity {
 
         // Notes are optional, so no validation needed
 
-        // Save to Firebase through ViewModel with personalAllocation
+        // UPDATED: Pass dashboardTimestamp to ViewModel
         savingCircleViewModel.addSavingCircle(groupName, creatorEmail, challengeTitle,
-                goalAmount, frequency, notes, personalAllocation);
+                goalAmount, frequency, notes, personalAllocation, dashboardTimestamp);
 
         // Hide form, show RecyclerView
         View formContainer = findViewById(R.id.form_Container);
