@@ -218,7 +218,7 @@ public class SavingCircleLog extends AppCompatActivity {
 
         // Notes are optional, so no validation needed
 
-        // UPDATED: Pass dashboardTimestamp to ViewModel
+        // UPDATED: Pass dashboardTimestamp and frequency to ViewModel
         savingCircleViewModel.addSavingCircle(groupName, creatorEmail, challengeTitle,
                 goalAmount, frequency, notes, personalAllocation, dashboardTimestamp);
 
@@ -269,14 +269,14 @@ public class SavingCircleLog extends AppCompatActivity {
         // Observe savingCircles from Firebase
         savingCircleViewModel.getSavingCircles().observe(this, savingCircles -> {
             adapter.setSavingCircles(savingCircles);
-
-            // Show/hide message based on whether there are saving circles
             View savingCircleMsg = findViewById(R.id.savingCircle_msg);
-            if (savingCircles.isEmpty()) {
-                savingCircleMsg.setVisibility(View.VISIBLE);
-            } else {
-                savingCircleMsg.setVisibility(View.GONE);
-            }
+            savingCircleMsg.setVisibility(savingCircles.isEmpty() ? View.VISIBLE : View.GONE);
+        });
+
+        adapter.setOnItemClickListener(savingCircle -> {
+            Intent intent = new Intent(this, SavingCircleDetailActivity.class);
+            intent.putExtra("CIRCLE_ID", savingCircle.getId());
+            startActivity(intent);
         });
 
         // Swipe to delete
