@@ -284,7 +284,7 @@ public class ExpenseLog extends AppCompatActivity {
             startActivity(budgetIntent);
         });
         findViewById(R.id.savingCircle_navigate).setOnClickListener(v -> {
-            Intent savingIntent = new Intent(this, SavingCircle.class);
+            Intent savingIntent = new Intent(this, SavingCircleLog.class);
             savingIntent.putExtra("selected_date", dashboardDate);
             startActivity(savingIntent);
         });

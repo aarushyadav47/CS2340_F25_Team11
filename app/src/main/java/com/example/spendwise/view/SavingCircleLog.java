@@ -12,25 +12,21 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.spendwise.R;
 import com.example.spendwise.adapter.SavingCircleAdapter;
-import com.example.spendwise.databinding.SavingcircleBinding;
+import com.example.spendwise.databinding.SavingcirclelogBinding;
 import com.example.spendwise.viewModel.SavingCircleViewModel;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.Calendar;
-import java.util.List;
 import java.util.Locale;
 
-import com.example.spendwise.model.SavingCircle;
-import com.example.spendwise.viewModel.SavingCircleViewModel;
 import com.google.android.material.textfield.TextInputEditText;
+
+import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 
-public class SavingCircle extends AppCompatActivity {
+public class SavingCircleLog extends AppCompatActivity {
     private SavingCircleViewModel savingCircleViewModel;
     private Calendar calendar = Calendar.getInstance();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
@@ -40,7 +36,7 @@ public class SavingCircle extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         // Using data binding to inflate the layout
-        SavingcircleBinding binding = SavingcircleBinding.inflate(getLayoutInflater());
+        SavingcirclelogBinding binding = SavingcirclelogBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         // ViewModel setup
@@ -62,6 +58,7 @@ public class SavingCircle extends AppCompatActivity {
         setupNavBar(dashboardDate);
 
         View savingCircleForm = findViewById(R.id.form_Container);
+        View formScrollView = findViewById(R.id.form_scroll_view);
         View savingCircleMsg = findViewById(R.id.savingCircle_msg);
         View savingCircleRecycler = findViewById(R.id.savingCircle_recycler_view);
 
@@ -70,14 +67,23 @@ public class SavingCircle extends AppCompatActivity {
         addCircleButton.setOnClickListener(v -> {
             clearForm();
             savingCircleForm.setVisibility(View.VISIBLE);
+            formScrollView.setVisibility(View.VISIBLE);
             savingCircleRecycler.setVisibility(View.GONE);
             savingCircleMsg.setVisibility(View.GONE);
         });
 
-        View createCirclebtn =findViewById(R.id.create_Challenge);
+        // Setup frequency dropdown
+        String[] freqOptions = {"Weekly", "Monthly"};
+        ArrayAdapter<String> freqAdapter = new ArrayAdapter<>(this,
+                R.layout.dropdown_item, freqOptions);
+        ((AutoCompleteTextView) findViewById(R.id.frequencyInput))
+                .setAdapter(freqAdapter);
+
+        View createCirclebtn = findViewById(R.id.create_Challenge);
         createCirclebtn.setOnClickListener(v -> saveSavingCircle());
 
         setUpRecyclerView();
+        observeUserEmail();
     }
 
     private void setupNavBar(String dashboardDate) {
@@ -96,7 +102,7 @@ public class SavingCircle extends AppCompatActivity {
             startActivity(budgetIntent);
         });
         findViewById(R.id.savingCircle_navigate).setOnClickListener(v -> {
-            Intent savingIntent = new Intent(this, SavingCircle.class);
+            Intent savingIntent = new Intent(this, SavingCircleLog.class);
             savingIntent.putExtra("selected_date", dashboardDate);
             startActivity(savingIntent);
         });
@@ -109,6 +115,7 @@ public class SavingCircle extends AppCompatActivity {
         TextInputEditText creatorEmailInput = findViewById(R.id.creatorEmailInput);
         TextInputEditText challengeTitleInput = findViewById(R.id.challengeTitleInput);
         TextInputEditText goalAmountInput = findViewById(R.id.goalAmountInput);
+        TextInputEditText personalAllocationInput = findViewById(R.id.personalAllocationInput);
         AutoCompleteTextView frequencyInput = findViewById(R.id.frequencyInput);
         TextInputEditText notesInput = findViewById(R.id.notesInput);
 
@@ -117,6 +124,7 @@ public class SavingCircle extends AppCompatActivity {
         String creatorEmail = creatorEmailInput.getText().toString().trim();
         String challengeTitle = challengeTitleInput.getText().toString().trim();
         String goalAmountStr = goalAmountInput.getText().toString().trim();
+        String personalAllocationStr = personalAllocationInput.getText().toString().trim();
         String frequency = frequencyInput.getText().toString().trim();
         String notes = notesInput.getText().toString().trim();
 
@@ -162,6 +170,33 @@ public class SavingCircle extends AppCompatActivity {
             return;
         }
 
+        // Validation - Personal Allocation
+        if (personalAllocationStr.isEmpty()) {
+            personalAllocationInput.setError("Personal allocation is required");
+            personalAllocationInput.requestFocus();
+            return;
+        }
+
+        double personalAllocation;
+        try {
+            personalAllocation = Double.parseDouble(personalAllocationStr);
+            if (personalAllocation <= 0) {
+                personalAllocationInput.setError("Amount must be positive");
+                personalAllocationInput.requestFocus();
+                return;
+            }
+            // Optional: Check if personal allocation exceeds goal amount
+            if (personalAllocation > goalAmount) {
+                personalAllocationInput.setError("Cannot exceed goal amount");
+                personalAllocationInput.requestFocus();
+                return;
+            }
+        } catch (NumberFormatException e) {
+            personalAllocationInput.setError("Invalid amount");
+            personalAllocationInput.requestFocus();
+            return;
+        }
+
         // Validation - Frequency
         if (frequency.isEmpty()) {
             frequencyInput.setError("Frequency is required");
@@ -178,15 +213,18 @@ public class SavingCircle extends AppCompatActivity {
 
         // Notes are optional, so no validation needed
 
-        // Save to Firebase through ViewModel
-        savingCircleViewModel.addSavingCircle(groupName, creatorEmail, challengeTitle, goalAmount, frequency, notes);
+        // Save to Firebase through ViewModel with personalAllocation
+        savingCircleViewModel.addSavingCircle(groupName, creatorEmail, challengeTitle,
+                goalAmount, frequency, notes, personalAllocation);
 
         // Hide form, show RecyclerView
         View formContainer = findViewById(R.id.form_Container);
+        View formScrollView = findViewById(R.id.form_scroll_view);
         View recyclerView = findViewById(R.id.savingCircle_recycler_view);
         View emptyMsg = findViewById(R.id.savingCircle_msg);
 
         formContainer.setVisibility(View.GONE);
+        formScrollView.setVisibility(View.GONE);
         recyclerView.setVisibility(View.VISIBLE);
         emptyMsg.setVisibility(View.GONE);
 
@@ -197,12 +235,14 @@ public class SavingCircle extends AppCompatActivity {
         TextInputEditText groupNameInput = findViewById(R.id.groupNameInput);
         TextInputEditText challengeTitleInput = findViewById(R.id.challengeTitleInput);
         TextInputEditText goalAmountInput = findViewById(R.id.goalAmountInput);
+        TextInputEditText personalAllocationInput = findViewById(R.id.personalAllocationInput);
         AutoCompleteTextView frequencyInput = findViewById(R.id.frequencyInput);
         TextInputEditText notesInput = findViewById(R.id.notesInput);
 
         groupNameInput.setText("");
         challengeTitleInput.setText("");
         goalAmountInput.setText("");
+        personalAllocationInput.setText("");
         frequencyInput.setText("");
         notesInput.setText("");
 
@@ -210,6 +250,7 @@ public class SavingCircle extends AppCompatActivity {
         groupNameInput.setError(null);
         challengeTitleInput.setError(null);
         goalAmountInput.setError(null);
+        personalAllocationInput.setError(null);
         frequencyInput.setError(null);
     }
 
@@ -249,10 +290,25 @@ public class SavingCircle extends AppCompatActivity {
 
             @Override
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-                String savingCircleId = adapter.getSavingCircleAt(viewHolder.getAdapterPosition()).getId();
-                savingCircleViewModel.deleteSavingCircle(savingCircleId);
+                int position = viewHolder.getAdapterPosition();
+                if (position != RecyclerView.NO_POSITION) {
+                    String savingCircleId = adapter.getSavingCircleAt(position).getId();
+                    savingCircleViewModel.deleteSavingCircle(savingCircleId);
+                }
             }
         }).attachToRecyclerView(recyclerView);
     }
-}
 
+    private void observeUserEmail() {
+        TextInputEditText creatorEmailInput = findViewById(R.id.creatorEmailInput);
+
+        savingCircleViewModel.getCurrentUserEmail().observe(this, email -> {
+            if (email != null && !email.isEmpty()) {
+                creatorEmailInput.setText(email);
+                // Make it read-only so users can't change it
+                creatorEmailInput.setEnabled(false);
+                creatorEmailInput.setFocusable(false);
+            }
+        });
+    }
+}

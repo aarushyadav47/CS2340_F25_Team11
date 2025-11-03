@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.spendwise.model.SavingCircle;
+import com.example.spendwise.model.SavingCircleMember;
 import com.example.spendwise.model.Firebase;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -25,24 +26,49 @@ public class SavingCircleViewModel extends ViewModel {
 
     private MutableLiveData<String> statusMessage;
     private MutableLiveData<List<SavingCircle>> savingCircles;
+    private MutableLiveData<String> currentUserEmail;
     private FirebaseDatabase database;
-    private DatabaseReference savingCirclesRef; // references to the savingCircles collection
-    // Firebase is a json so points to that node
+    private DatabaseReference savingCirclesRef;
     private FirebaseAuth auth;
 
     public SavingCircleViewModel() {
         savingCircles = new MutableLiveData<>(new ArrayList<>());
         statusMessage = new MutableLiveData<>();
+        currentUserEmail = new MutableLiveData<>();
 
         // Initialize Firebase
-        database = Firebase.getDatabase(); // gets it from package.json
-        auth = FirebaseAuth.getInstance(); // gets user info
+        database = Firebase.getDatabase();
+        auth = FirebaseAuth.getInstance();
 
-        // Setup user specific path for the proper structure in database tree,
-        // and correct retrieval later
+        // Load current user email
+        loadCurrentUserEmail();
+
+        // Setup user specific path for the proper structure in database tree
         setupUserSavingCirclesReference();
-        // Load saving circles from Firebase when ViewModel is created (a function)
+
+        // Load saving circles from Firebase when ViewModel is created
         loadSavingCirclesFromFirebase();
+    }
+
+    // Load the current user's email from Firebase Auth
+    private void loadCurrentUserEmail() {
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser != null) {
+            String email = currentUser.getEmail();
+            currentUserEmail.setValue(email);
+            Log.d(TAG, "Current user email loaded: " + email);
+        } else {
+            Log.e(TAG, "No user logged in!");
+            currentUserEmail.setValue("");
+        }
+    }
+
+    /**
+     * Get the current user's email as LiveData
+     * @return LiveData containing the user's email
+     */
+    public LiveData<String> getCurrentUserEmail() {
+        return currentUserEmail;
     }
 
     // Setup reference based on current user
@@ -64,9 +90,10 @@ public class SavingCircleViewModel extends ViewModel {
         return savingCircles;
     }
 
-    // Add new saving circle to Firebase
+    // UPDATED: Add new saving circle to Firebase AND add creator as first member
     public void addSavingCircle(String groupName, String creatorEmail, String challengeTitle,
-                                double goalAmount, String frequency, String notes) {
+                                double goalAmount, String frequency, String notes,
+                                double personalAllocation) {
         if (savingCirclesRef == null) {
             Log.e(TAG, "savingCirclesRef is null! Cannot add saving circle.");
             statusMessage.setValue("Error: User not logged in");
@@ -76,11 +103,8 @@ public class SavingCircleViewModel extends ViewModel {
         SavingCircle savingCircle = new SavingCircle(groupName, creatorEmail, challengeTitle,
                 goalAmount, frequency, notes);
         // Push to Firebase (auto-generates ID)
-        // creates a new child location in the database tree with unique id
         DatabaseReference newSavingCircleRef = savingCirclesRef.push();
-        // gets the key associated with the pointer ie /savingCircles/mkdfjos
         String firebaseId = newSavingCircleRef.getKey();
-        // ensures the key in database and of object is aligned
         savingCircle.setId(firebaseId);
 
         Log.d(TAG, "Adding saving circle to Firebase: " + savingCircle);
@@ -88,21 +112,147 @@ public class SavingCircleViewModel extends ViewModel {
         newSavingCircleRef.setValue(savingCircle)
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "Saving circle added successfully: " + savingCircle);
+
+                    // Now add the creator as the first member
+                    addMemberToCircle(firebaseId, creatorEmail, personalAllocation);
+
                     statusMessage.setValue("Saving circle created!");
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error adding saving circle", e);
                     statusMessage.setValue("Error: " + e.getMessage());
                 });
-        // setValue in that pointer location that holds no data
-        // with serialized (json formatted) data
+    }
+
+    // NEW: Add a member to a saving circle
+    public void addMemberToCircle(String circleId, String memberEmail, double personalAllocation) {
+        if (savingCirclesRef == null) {
+            Log.e(TAG, "savingCirclesRef is null!");
+            return;
+        }
+
+        SavingCircleMember member = new SavingCircleMember(memberEmail, personalAllocation);
+
+        // Path: users/{uid}/savingCircles/{circleId}/members/{memberEmail-sanitized}
+        // Sanitize email because Firebase keys can't contain . or @
+        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+
+        savingCirclesRef.child(circleId)
+                .child("members")
+                .child(sanitizedEmail)
+                .setValue(member)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Member added to circle: " + memberEmail);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error adding member to circle", e);
+                });
+    }
+
+    // NEW: Deduct expense from member's current amount
+    public void deductExpenseFromMember(String circleId, String memberEmail, double expenseAmount) {
+        if (savingCirclesRef == null) {
+            Log.e(TAG, "savingCirclesRef is null!");
+            return;
+        }
+
+        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+
+        // Get current amount first
+        savingCirclesRef.child(circleId)
+                .child("members")
+                .child(sanitizedEmail)
+                .child("currentAmount")
+                .get()
+                .addOnSuccessListener(dataSnapshot -> {
+                    Double currentAmount = dataSnapshot.getValue(Double.class);
+                    if (currentAmount != null) {
+                        double newAmount = currentAmount - expenseAmount;
+
+                        // Don't let it go below 0
+                        if (newAmount < 0) {
+                            newAmount = 0;
+                        }
+
+                        // Update the current amount
+                        savingCirclesRef.child(circleId)
+                                .child("members")
+                                .child(sanitizedEmail)
+                                .child("currentAmount")
+                                .setValue(newAmount)
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Expense deducted from member's current amount");
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Error deducting expense", e);
+                                });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching current amount", e);
+                });
+    }
+
+    // NEW: Add expense amount back (if user deletes an expense)
+    public void addBackExpenseToMember(String circleId, String memberEmail, double expenseAmount) {
+        if (savingCirclesRef == null) return;
+
+        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+
+        savingCirclesRef.child(circleId)
+                .child("members")
+                .child(sanitizedEmail)
+                .child("currentAmount")
+                .get()
+                .addOnSuccessListener(dataSnapshot -> {
+                    Double currentAmount = dataSnapshot.getValue(Double.class);
+                    if (currentAmount != null) {
+                        double newAmount = currentAmount + expenseAmount;
+
+                        // Update the current amount
+                        savingCirclesRef.child(circleId)
+                                .child("members")
+                                .child(sanitizedEmail)
+                                .child("currentAmount")
+                                .setValue(newAmount)
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Expense amount added back");
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Error adding back expense", e);
+                                });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching current amount", e);
+                });
+    }
+
+    // NEW: Update member's current amount directly (for manual deposits/contributions)
+    public void updateMemberCurrentAmount(String circleId, String memberEmail, double newAmount) {
+        if (savingCirclesRef == null) return;
+
+        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+
+        savingCirclesRef.child(circleId)
+                .child("members")
+                .child(sanitizedEmail)
+                .child("currentAmount")
+                .setValue(newAmount)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Member current amount updated");
+                    statusMessage.setValue("Amount updated!");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error updating member amount", e);
+                });
     }
 
     public LiveData<String> getStatusMessage() {
         return statusMessage;
     }
 
-    // Update existing saving circle in Firebase
+    // UPDATED: Update existing saving circle in Firebase
     public void updateSavingCircle(String id, String groupName, String creatorEmail,
                                    String challengeTitle, double goalAmount,
                                    String frequency, String notes) {
@@ -168,6 +318,7 @@ public class SavingCircleViewModel extends ViewModel {
                                     frequency,
                                     notes != null ? notes : ""
                             );
+                            savingCircle.setId(id);
                             savingCircleList.add(savingCircle);
                         }
                     } catch (Exception e) {

@@ -44,7 +44,7 @@ public class Chatbot extends AppCompatActivity {
         );
 
         savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircle.class))
+                startActivity(new Intent(this, SavingCircleLog.class))
         );
 
         chatbotNavigate.setOnClickListener(v ->

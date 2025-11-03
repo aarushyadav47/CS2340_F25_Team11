@@ -28,7 +28,7 @@ public class SavingCircleAdapter extends RecyclerView.Adapter<SavingCircleAdapte
     @Override
     public SavingCircleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.saving_circle_item, parent, false);
+                .inflate(R.layout.savingcircle_item, parent, false);
         return new SavingCircleViewHolder(view);
     }
 

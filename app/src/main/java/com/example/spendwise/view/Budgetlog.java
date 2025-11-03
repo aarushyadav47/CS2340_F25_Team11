@@ -98,7 +98,7 @@ public class Budgetlog extends AppCompatActivity {
             startActivity(budgetIntent);
         });
         findViewById(R.id.savingCircle_navigate).setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircle.class)));
+                startActivity(new Intent(this, SavingCircleLog.class)));
         findViewById(R.id.chatbot_navigate).setOnClickListener(v ->
                 startActivity(new Intent(this, Chatbot.class)));
 

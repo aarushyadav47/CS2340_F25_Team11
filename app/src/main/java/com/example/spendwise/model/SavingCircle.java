@@ -16,7 +16,7 @@ public class SavingCircle {
     public SavingCircle() {
     }
 
-    // Main constructor (like your Expense constructor)
+    // Main constructor
     public SavingCircle(String groupName, String creatorEmail, String challengeTitle,
                         double goalAmount, String frequency, String notes) {
         this.id = UUID.randomUUID().toString();

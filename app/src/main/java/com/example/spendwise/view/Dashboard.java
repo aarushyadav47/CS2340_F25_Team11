@@ -210,7 +210,7 @@ public class Dashboard extends AppCompatActivity {
         });
 
         savingCircleNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(Dashboard.this, SavingCircle.class);
+            Intent intent = new Intent(Dashboard.this, SavingCircleLog.class);
             intent.putExtra("selected_date",
                     shortDateFormat.format(currentSimulatedDate.getTime()));
             startActivity(intent);
