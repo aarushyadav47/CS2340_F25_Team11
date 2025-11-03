@@ -29,7 +29,7 @@
         <activity android:name="com.example.spendwise.view.ExpenseLog" />
         <activity android:name="com.example.spendwise.view.Chatbot" />
         <activity android:name="com.example.spendwise.view.Budgetlog" />
-        <activity android:name="com.example.spendwise.view.SavingCircle" />
+        <activity android:name="com.example.spendwise.view.SavingCircleLog" />
         <activity android:name="com.example.spendwise.view.BudgetDetails" />
     </application>
 
