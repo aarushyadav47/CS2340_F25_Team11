@@ -4,12 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <data>
-        <!-- Example variable, remove if not using ViewModel -->
-        <!--
-        <variable
-            name="viewModel"
-            type="com.example.sprint1.MyViewModel" />
-        -->
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
