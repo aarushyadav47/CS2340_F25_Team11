@@ -1,11 +1,9 @@
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static final Logger logger = Logger.getLogger(Main.class.getName());
     
     public static void main(String[] args) {
         // Using polymorphic discount implementations
@@ -22,7 +20,7 @@ public class Main {
         OrderManager orderManager = new OrderManager();
 
         logger.info("\n########## Calculating Total #############");
-        logger.info("Total Price: ${}", order.calculateTotalPrice());
+        logger.info("Total Price: $" + order.calculateTotalPrice());
         
         logger.info("\n########## Sending Email #############");
         orderManager.sendConfirmationEmail(order);
