@@ -1,7 +1,12 @@
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class OrderManager {
+    private static final Logger logger = LoggerFactory.getLogger(OrderManager.class);
+    
     // FIX 6: Extracted printing responsibility
     public void printOrder(Order order) {
-        System.out.println(orderToString(order));
+        logger.info("{}", orderToString(order));
     }
 
     // FIX 6: Extracted email responsibility
@@ -11,11 +16,11 @@ public class OrderManager {
     }
 
     public String orderToString(Order order) {
-        String str= "Order Details:\n";
+        StringBuilder str = new StringBuilder("Order Details:\n");
         for (Item item : order.getItems()) {
-            str += item.getName() + " - $" + item.getPrice() + "\n";
+            str.append(item.getName()).append(" - $").append(item.getPrice()).append("\n");
         }
-        str += "Total: $" + order.calculateTotalPrice();
-        return str;
+        str.append("Total: $").append(order.calculateTotalPrice());
+        return str.toString();
     }
 }
