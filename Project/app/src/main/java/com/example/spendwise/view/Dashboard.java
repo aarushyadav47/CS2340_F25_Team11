@@ -252,51 +252,6 @@ public class Dashboard extends AppCompatActivity {
         monthlyCard.setFocusable(false);
     }
 
-    private void showFilteredBudgets(String frequency) {
-        RecyclerView recyclerView = findViewById(R.id.remaining_budgets_recycler);
-        recyclerView.setVisibility(View.VISIBLE);
-
-        budgetViewModel.getBudgets().observe(this, budgets -> {
-            List<Budget> filteredBudgets = new ArrayList<>();
-
-            for (Budget budget : budgets) {
-                if (frequency.equalsIgnoreCase(budget.getfreq())) {
-                    try {
-                        Date budgetDate = shortDateFormat.parse(budget.getDate());
-                        if (budgetDate != null) {
-                            boolean isInPeriod = false;
-
-                            if ("Weekly".equalsIgnoreCase(frequency)) {
-                                isInPeriod = isInCurrentWeek(budgetDate);
-                            } else if ("Monthly".equalsIgnoreCase(frequency)) {
-                                isInPeriod = isInCurrentMonth(budgetDate);
-                            }
-
-                            if (isInPeriod) {
-                                filteredBudgets.add(budget);
-                            }
-                        }
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-            if (filteredBudgets.isEmpty()) {
-                Toast.makeText(this,
-                        "No " + frequency.toLowerCase()
-                                + " budgets found for this period",
-                        Toast.LENGTH_SHORT).show();
-                recyclerView.setVisibility(View.GONE);
-            } else {
-                remainingBudgetsAdapter.setBudgets(filteredBudgets);
-                Toast.makeText(this, "Showing " + filteredBudgets.size() + " "
-                                + frequency.toLowerCase() + " budget(s)",
-                        Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     private void loadAllRemainingBudgets() {
         budgetViewModel.getBudgets().observe(this, budgets -> {
             expenseViewModel.getExpenses().observe(this, expenses -> {
@@ -434,7 +389,6 @@ public class Dashboard extends AppCompatActivity {
     }
 
     private void calculateAndDisplayTotals(List<Expense> expenses,
-                                           Calendar weekStart, Calendar weekEnd,
                                            Calendar monthStart,
                                            Calendar monthEnd) {
         double totalSpent = 0.0;
@@ -442,12 +396,8 @@ public class Dashboard extends AppCompatActivity {
         for (Expense expense : expenses) {
             try {
                 Date expenseDate = shortDateFormat.parse(expense.getDate());
-                if (expenseDate != null) {
-                    // Total spent in current month (for the main spending card)
-                    if (isDateInRange(expenseDate, monthStart.getTime(),
-                            monthEnd.getTime())) {
-                        totalSpent += expense.getAmount();
-                    }
+                if (expenseDate != null && isDateInRange(expenseDate, monthStart.getTime(), monthEnd.getTime())) {
+                    totalSpent += expense.getAmount();
                 }
             } catch (ParseException e) {
                 e.printStackTrace();
