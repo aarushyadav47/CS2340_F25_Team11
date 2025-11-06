@@ -6,7 +6,7 @@ public class OrderManager {
     
     // FIX 6: Extracted printing responsibility
     public void printOrder(Order order) {
-        logger.info("{0}", orderToString(order));
+        logger.info(orderToString(order));
     }
     
     // FIX 6: Extracted email responsibility
