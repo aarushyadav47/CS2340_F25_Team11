@@ -1,11 +1,7 @@
-package codesmells;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class Main {
-    private static final Logger logger = Logger.getLogger(Main.class.getName());
     public static void main(String[] args) {
         // Using polymorphic discount implementations
         Item item1 = new Item("Book", 20, 1, new AmountDiscount(5));
@@ -20,12 +16,12 @@ public class Main {
         Order order = new Order(items, "John Doe", "johndoe@example.com");
         OrderManager orderManager = new OrderManager();
 
-        logger.info("\n########## Calculating Total #############");
-        logger.info("Total Price: $" + order.calculateTotalPrice());
+        System.out.println("\n########## Calculating Total #############");
+        System.out.println("Total Price: $" + order.calculateTotalPrice());
         
-        logger.info("\n########## Sending Email #############");
+        System.out.println("\n########## Sending Email #############");
         orderManager.sendConfirmationEmail(order);
-        logger.info("\n########## Printing Order Details #############");
+        System.out.println("\n########## Printing Order Details #############");
         orderManager.printOrder(order);
     }
 }

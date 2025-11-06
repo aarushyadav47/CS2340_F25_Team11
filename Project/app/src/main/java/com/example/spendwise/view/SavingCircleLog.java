@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.spendwise.R;
 import com.example.spendwise.adapter.SavingCircleAdapter;
 import com.example.spendwise.databinding.SavingcirclelogBinding;
-import com.example.spendwise.viewmodel.SavingCircleViewModel;
+import com.example.spendwise.viewModel.SavingCircleViewModel;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
