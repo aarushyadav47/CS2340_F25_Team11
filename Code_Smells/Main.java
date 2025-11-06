@@ -15,5 +15,13 @@ public class Main {
 
         Order order = new Order(items, "John Doe", "johndoe@example.com");
         OrderManager orderManager = new OrderManager();
+
+        System.out.println("\n########## Calculating Total #############");
+        System.out.println("Total Price: $" + order.calculateTotalPrice());
+        
+        System.out.println("\n########## Sending Email #############");
+        orderManager.sendConfirmationEmail(order);
+        System.out.println("\n########## Printing Order Details #############");
+        orderManager.printOrder(order);
     }
 }
