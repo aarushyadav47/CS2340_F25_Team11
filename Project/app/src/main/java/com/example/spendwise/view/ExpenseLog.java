@@ -24,7 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import com.example.spendwise.adapter.ExpenseAdapter;
 
-import com.example.spendwise.viewmodel.ExpenseViewModel;
+import com.example.spendwise.viewModel.ExpenseViewModel;
 import com.google.android.material.textfield.TextInputEditText;
 
 import android.widget.AutoCompleteTextView;

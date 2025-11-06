@@ -1,5 +1,3 @@
-package codesmells;
-
 public class PercentageDiscount implements Discount {
     private double percentage;
 

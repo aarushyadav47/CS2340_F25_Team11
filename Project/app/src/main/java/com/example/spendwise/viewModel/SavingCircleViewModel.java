@@ -1,4 +1,4 @@
-package com.example.spendwise.viewmodel;
+package com.example.spendwise.viewModel;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -23,9 +23,6 @@ import java.util.List;
 
 public class SavingCircleViewModel extends ViewModel {
     private static final String TAG = "SavingCircleViewModel";
-    private static final String ERROR_PREFIX = "Error: ";
-    private static final String DB_MEMBERS = "members";
-    private static final String DB_CURRENT_AMOUNT = "currentAmount";
 
     private MutableLiveData<String> statusMessage;
     private MutableLiveData<List<SavingCircle>> savingCircles;
@@ -126,7 +123,7 @@ public class SavingCircleViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error adding saving circle", e);
-                    statusMessage.setValue(ERROR_PREFIX + e.getMessage());
+                    statusMessage.setValue("Error: " + e.getMessage());
                 });
     }
 
@@ -140,11 +137,12 @@ public class SavingCircleViewModel extends ViewModel {
         // UPDATED: Pass joinTimestamp to SavingCircleMember constructor
         SavingCircleMember member = new SavingCircleMember(memberEmail, personalAllocation, joinTimestamp);
 
+        // Path: users/{uid}/savingCircles/{circleId}/members/{memberEmail-sanitized}
         // Sanitize email because Firebase keys can't contain . or @
         String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
 
         savingCirclesRef.child(circleId)
-                .child(DB_MEMBERS)
+                .child("members")
                 .child(sanitizedEmail)
                 .setValue(member)
                 .addOnSuccessListener(aVoid -> {
@@ -166,9 +164,9 @@ public class SavingCircleViewModel extends ViewModel {
 
         // Get current amount first
         savingCirclesRef.child(circleId)
-                .child(DB_MEMBERS)
+                .child("members")
                 .child(sanitizedEmail)
-                .child(DB_CURRENT_AMOUNT)
+                .child("currentAmount")
                 .get()
                 .addOnSuccessListener(dataSnapshot -> {
                     Double currentAmount = dataSnapshot.getValue(Double.class);
@@ -182,9 +180,9 @@ public class SavingCircleViewModel extends ViewModel {
 
                         // Update the current amount
                         savingCirclesRef.child(circleId)
-                                .child(DB_MEMBERS)
+                                .child("members")
                                 .child(sanitizedEmail)
-                                .child(DB_CURRENT_AMOUNT)
+                                .child("currentAmount")
                                 .setValue(newAmount)
                                 .addOnSuccessListener(aVoid -> {
                                     Log.d(TAG, "Expense deducted from member's current amount");
@@ -206,9 +204,9 @@ public class SavingCircleViewModel extends ViewModel {
         String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
 
         savingCirclesRef.child(circleId)
-                .child(DB_MEMBERS)
+                .child("members")
                 .child(sanitizedEmail)
-                .child(DB_CURRENT_AMOUNT)
+                .child("currentAmount")
                 .get()
                 .addOnSuccessListener(dataSnapshot -> {
                     Double currentAmount = dataSnapshot.getValue(Double.class);
@@ -217,9 +215,9 @@ public class SavingCircleViewModel extends ViewModel {
 
                         // Update the current amount
                         savingCirclesRef.child(circleId)
-                                .child(DB_MEMBERS)
+                                .child("members")
                                 .child(sanitizedEmail)
-                                .child(DB_CURRENT_AMOUNT)
+                                .child("currentAmount")
                                 .setValue(newAmount)
                                 .addOnSuccessListener(aVoid -> {
                                     Log.d(TAG, "Expense amount added back");
@@ -241,9 +239,9 @@ public class SavingCircleViewModel extends ViewModel {
         String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
 
         savingCirclesRef.child(circleId)
-                .child(DB_MEMBERS)
+                .child("members")
                 .child(sanitizedEmail)
-                .child(DB_CURRENT_AMOUNT)
+                .child("currentAmount")
                 .setValue(newAmount)
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "Member current amount updated");
@@ -278,7 +276,7 @@ public class SavingCircleViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error updating saving circle", e);
-                    statusMessage.setValue(ERROR_PREFIX + e.getMessage());
+                    statusMessage.setValue("Error: " + e.getMessage());
                 });
     }
 
@@ -361,7 +359,7 @@ public class SavingCircleViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error deleting saving circle", e);
-                    statusMessage.setValue(ERROR_PREFIX + e.getMessage());
+                    statusMessage.setValue("Error: " + e.getMessage());
                 });
     }
 }
