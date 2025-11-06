@@ -136,8 +136,7 @@ public class SavingCircleViewModel extends ViewModel {
 
         // UPDATED: Pass joinTimestamp to SavingCircleMember constructor
         SavingCircleMember member = new SavingCircleMember(memberEmail, personalAllocation, joinTimestamp);
-
-        // Path: users/{uid}/savingCircles/{circleId}/members/{memberEmail-sanitized}
+        
         // Sanitize email because Firebase keys can't contain . or @
         String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
 

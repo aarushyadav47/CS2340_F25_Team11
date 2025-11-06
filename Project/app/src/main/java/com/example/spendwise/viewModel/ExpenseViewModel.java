@@ -65,13 +65,6 @@ public class ExpenseViewModel extends ViewModel {
         return expenses;
     }
 
-    /*public void addExpense(Expense expense) {
-        expenses.getValue().add(expense);
-        // Add directly to the list by unpacking the mutable live data box
-        expenses.setValue(expenses.getValue());
-        // Tell LiveData to update UI and stuff (opens box and alerts everyone using it)
-    }*/
-
     // Add new expense to Firebase
     public void addExpense(String name, double amount, Category category,
                            String date, String notes) {
@@ -192,12 +185,4 @@ public class ExpenseViewModel extends ViewModel {
                     statusMessage.setValue("Error: " + e.getMessage());
                 });
     }
-
-    /* public void addExpense(String name, String amount, String category, String date) {
-        if (name.isEmpty() || amount == null ||date.isEmpty()) {
-            logResult.setValue("Please enter valid data in the input fields");
-            return;
-        }
-    }
-    */
 }
