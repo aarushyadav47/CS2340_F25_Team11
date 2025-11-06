@@ -24,7 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import com.example.spendwise.adapter.BudgetAdapter;
 
-import com.example.spendwise.viewModel.BudgetViewModel;
+import com.example.spendwise.viewmodel.BudgetViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 

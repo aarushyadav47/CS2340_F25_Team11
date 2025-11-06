@@ -1,4 +1,4 @@
-package com.example.spendwise.viewModel;
+package com.example.spendwise.viewmodel;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -23,6 +23,7 @@ import java.util.List;
 
 public class ExpenseViewModel extends ViewModel {
     private static final String TAG = "ExpenseViewModel";
+    private static final String ERROR_PREFIX = "Error: ";
 
     private MutableLiveData<String> statusMessage;
     private MutableLiveData<List<Expense>> expenses;
@@ -65,13 +66,6 @@ public class ExpenseViewModel extends ViewModel {
         return expenses;
     }
 
-    /*public void addExpense(Expense expense) {
-        expenses.getValue().add(expense);
-        // Add directly to the list by unpacking the mutable live data box
-        expenses.setValue(expenses.getValue());
-        // Tell LiveData to update UI and stuff (opens box and alerts everyone using it)
-    }*/
-
     // Add new expense to Firebase
     public void addExpense(String name, double amount, Category category,
                            String date, String notes) {
@@ -99,7 +93,7 @@ public class ExpenseViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error adding expense", e);
-                    statusMessage.setValue("Error: " + e.getMessage());
+                    statusMessage.setValue(ERROR_PREFIX + e.getMessage());
                 });
         // setsValue in that pointer location that holds no data
         // with serialized (json formatted) data
@@ -122,7 +116,7 @@ public class ExpenseViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error updating expense", e);
-                    statusMessage.setValue("Error: " + e.getMessage());
+                    statusMessage.setValue(ERROR_PREFIX + e.getMessage());
                 });
     }
 
@@ -189,15 +183,7 @@ public class ExpenseViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error deleting expense", e);
-                    statusMessage.setValue("Error: " + e.getMessage());
+                    statusMessage.setValue(ERROR_PREFIX + e.getMessage());
                 });
     }
-
-    /* public void addExpense(String name, String amount, String category, String date) {
-        if (name.isEmpty() || amount == null ||date.isEmpty()) {
-            logResult.setValue("Please enter valid data in the input fields");
-            return;
-        }
-    }
-    */
 }

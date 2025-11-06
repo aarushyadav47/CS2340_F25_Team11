@@ -1,3 +1,5 @@
+package codesmells;
+
 public class TaxableItem extends Item {
     private double taxRate = 7;
 
