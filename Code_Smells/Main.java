@@ -20,7 +20,7 @@ public class Main {
         OrderManager orderManager = new OrderManager();
 
         logger.info("\n########## Calculating Total #############");
-        logger.info("Total Price: $" + order.calculateTotalPrice());
+        logger.info("Total Price: ${0}", order.calculateTotalPrice());
         
         logger.info("\n########## Sending Email #############");
         orderManager.sendConfirmationEmail(order);
