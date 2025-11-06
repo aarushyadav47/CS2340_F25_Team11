@@ -1,5 +1,8 @@
 package com.example.spendwise.model;
+import android.util.Log;
+
 public class User {
+    private static final String TAG = "User";
     // Attributs
     private String id;
     private String name;
@@ -48,6 +51,6 @@ public class User {
     }
 
     public void printUserInfo() {
-        System.out.println("User: " + name + ", Email: " + email);
+        Log.d(TAG, "User: " + name + ", Email: " + email);
     }
 }

@@ -1,4 +1,4 @@
-package com.example.spendwise.viewModel;
+package com.example.spendwise.viewmodel;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 
 public class BudgetViewModel extends ViewModel {
+    private static final String MSG_USER_NOT_AUTHENTICATED = "User not authenticated";
+    private static final String DB_USERS = "users";
+    private static final String DB_BUDGETS = "budgets";
     private final DatabaseReference database = FirebaseDatabase.getInstance().getReference();
     private final FirebaseAuth auth = FirebaseAuth.getInstance();
     private final MutableLiveData<List<Budget>> budgets = new MutableLiveData<>(new ArrayList<>());
@@ -37,13 +40,13 @@ public class BudgetViewModel extends ViewModel {
     public void loadBudgets() {
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) {
-            statusMessage.setValue("User not authenticated");
+            statusMessage.setValue(MSG_USER_NOT_AUTHENTICATED);
             return;
         }
 
-        database.child("users")
+        database.child(DB_USERS)
                 .child(user.getUid())
-                .child("budgets")
+                .child(DB_BUDGETS)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
@@ -82,7 +85,7 @@ public class BudgetViewModel extends ViewModel {
     public void addBudget(String name, double amount, Category category, String date, String freq) {
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) {
-            statusMessage.setValue("User not authenticated");
+            statusMessage.setValue(MSG_USER_NOT_AUTHENTICATED);
             return;
         }
 
@@ -95,9 +98,9 @@ public class BudgetViewModel extends ViewModel {
         budgetData.put("date", budget.getDate());
         budgetData.put("freq", budget.getfreq());
 
-        database.child("users")
+        database.child(DB_USERS)
                 .child(user.getUid())
-                .child("budgets")
+                .child(DB_BUDGETS)
                 .child(budget.getId())
                 .setValue(budgetData)
                 .addOnSuccessListener(aVoid -> {
@@ -111,13 +114,13 @@ public class BudgetViewModel extends ViewModel {
     public void deleteBudget(String budgetId) {
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) {
-            statusMessage.setValue("User not authenticated");
+            statusMessage.setValue(MSG_USER_NOT_AUTHENTICATED);
             return;
         }
 
-        database.child("users")
+        database.child(DB_USERS)
                 .child(user.getUid())
-                .child("budgets")
+                .child(DB_BUDGETS)
                 .child(budgetId)
                 .removeValue()
                 .addOnSuccessListener(aVoid -> {

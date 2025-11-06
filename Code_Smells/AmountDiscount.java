@@ -1,3 +1,5 @@
+package codesmells;
+
 public class AmountDiscount implements Discount {
     private double amount;
 

@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.spendwise.databinding.LoginBinding;
 
-import com.example.spendwise.viewModel.LoginViewModel;
+import com.example.spendwise.viewmodel.LoginViewModel;
 
 public class Login extends AppCompatActivity {
 
