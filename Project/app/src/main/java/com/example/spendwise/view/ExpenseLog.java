@@ -239,19 +239,13 @@ public class ExpenseLog extends AppCompatActivity {
         expenseViewModel.getExpenses().observe(this, expenses -> {
             // Sort expenses from newest to oldest
             List<Expense> sortedExpenses = new ArrayList<>(expenses);
-            Collections.sort(sortedExpenses, new Comparator<Expense>() {
-                @Override
-                public int compare(Expense e1, Expense e2) {
-                    try {
-                        Date date1 = dateFormat.parse(e1.getDate());
-                        Date date2 = dateFormat.parse(e2.getDate());
-                        // Sort in descending order (newest first)
-                        return date2.compareTo(date1);
-                    } catch (ParseException e) {
-                        return 0;
-                    }
+            sortedExpenses.sort(Comparator.comparing(e -> {
+                try {
+                    return dateFormat.parse(e.getDate());
+                } catch (ParseException ex) {
+                    return new Date(0); // or handle error differently
                 }
-            });
+            }).reversed());
 
             adapter.setExpenses(sortedExpenses);
 
