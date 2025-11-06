@@ -7,9 +7,14 @@ public class TaxableItem extends Item {
 
     @Override
     public double calculateFinalPrice() {
-        double basePrice = super.calculateFinalPrice();
-        double tax = basePrice * (taxRate / 100.0);
-        return basePrice + tax;
+        // Apply discount first
+        double discountedPrice = super.calculateFinalPrice();
+        
+        // Calculate tax on ORIGINAL price
+        double tax = getPrice() * (taxRate / 100.0);
+        
+        // Return: (discounted price + tax) × quantity
+        return (discountedPrice + tax) * getQuantity();
     }
 
     public double getTaxRate() {
