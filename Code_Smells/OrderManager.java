@@ -1,12 +1,11 @@
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
 
 public class OrderManager {
-    private static final Logger logger = LoggerFactory.getLogger(OrderManager.class);
+    private static final Logger logger = Logger.getLogger(OrderManager.class.getName());
     
     // FIX 6: Extracted printing responsibility
     public void printOrder(Order order) {
-        logger.info("{}", orderToString(order));
+        logger.info(orderToString(order));
     }
 
     // FIX 6: Extracted email responsibility
