@@ -1,7 +1,6 @@
 public class OrderManager {
     // FIX 6: Extracted printing responsibility
     public void printOrder(Order order) {
-        System.out.println(orderToString(order));
     }
 
     // FIX 6: Extracted email responsibility
