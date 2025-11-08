@@ -2,6 +2,7 @@ package com.example.spendwise.view;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,18 +14,22 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.spendwise.R;
 import com.example.spendwise.adapter.SavingCircleAdapter;
 import com.example.spendwise.databinding.SavingcirclelogBinding;
+import com.example.spendwise.model.SavingCircle;
 import com.example.spendwise.viewModel.SavingCircleViewModel;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 import com.google.android.material.textfield.TextInputEditText;
 
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.Toast;
 
 public class SavingCircleLog extends AppCompatActivity {
     private SavingCircleViewModel savingCircleViewModel;
@@ -89,6 +94,15 @@ public class SavingCircleLog extends AppCompatActivity {
 
         setUpRecyclerView();
         observeUserEmail();
+
+        View inviteButton = findViewById(R.id.invite_button);
+        View viewInvitationsButton = findViewById(R.id.view_invitations_button);
+
+        inviteButton.setOnClickListener(v -> showInviteDialog());
+        viewInvitationsButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, InvitationsActivity.class);
+            startActivity(intent);
+        });
     }
 
     private void setupNavBar(String dashboardDate) {
@@ -273,9 +287,12 @@ public class SavingCircleLog extends AppCompatActivity {
             savingCircleMsg.setVisibility(savingCircles.isEmpty() ? View.VISIBLE : View.GONE);
         });
 
+        // Pass the dashboard timestamp to detail activity
         adapter.setOnItemClickListener(savingCircle -> {
             Intent intent = new Intent(this, SavingCircleDetailActivity.class);
             intent.putExtra("CIRCLE_ID", savingCircle.getId());
+            intent.putExtra("SELECTED_DATE", dashboardTimestamp);
+            Log.d("SavingCircleLog", "Opening detail with date: " + dateFormat.format(dashboardTimestamp));
             startActivity(intent);
         });
 
@@ -315,5 +332,121 @@ public class SavingCircleLog extends AppCompatActivity {
                 creatorEmailInput.setFocusable(false);
             }
         });
+    }
+
+
+    // Add this method to show the invitation dialog
+    private void showInviteDialog() {
+        // Create dialog
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_send_invitation, null);
+        builder.setView(dialogView);
+
+        android.app.AlertDialog dialog = builder.create();
+
+        // Get views from dialog
+        AutoCompleteTextView circleDropdown = dialogView.findViewById(R.id.circleDropdown);
+        TextInputEditText inviteeEmailInput = dialogView.findViewById(R.id.inviteeEmailInput);
+        View sendButton = dialogView.findViewById(R.id.sendButton);
+        View cancelButton = dialogView.findViewById(R.id.cancelButton);
+
+        // Load user's circles into dropdown
+        savingCircleViewModel.getSavingCircles().observe(this, circles -> {
+            if (circles != null && !circles.isEmpty()) {
+                // Filter to only show circles where user is the creator
+                List<SavingCircle> ownedCircles = new ArrayList<>();
+                String currentUserEmail = savingCircleViewModel.getCurrentUserEmail().getValue();
+
+                for (SavingCircle circle : circles) {
+                    if (circle.getCreatorEmail().equals(currentUserEmail)) {
+                        ownedCircles.add(circle);
+                    }
+                }
+
+                if (ownedCircles.isEmpty()) {
+                    Toast.makeText(this, "You don't own any circles to invite people to",
+                            Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                    return;
+                }
+
+                // Create dropdown items with circle names
+                String[] circleNames = new String[ownedCircles.size()];
+                for (int i = 0; i < ownedCircles.size(); i++) {
+                    circleNames[i] = ownedCircles.get(i).getGroupName() + " - " +
+                            ownedCircles.get(i).getChallengeTitle();
+                }
+
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                        android.R.layout.simple_dropdown_item_1line, circleNames);
+                circleDropdown.setAdapter(adapter);
+
+                // Handle send button click
+                sendButton.setOnClickListener(v -> {
+                    int selectedPosition = -1;
+                    String selectedText = circleDropdown.getText().toString();
+
+                    // Find which circle was selected
+                    for (int i = 0; i < circleNames.length; i++) {
+                        if (circleNames[i].equals(selectedText)) {
+                            selectedPosition = i;
+                            break;
+                        }
+                    }
+
+                    if (selectedPosition == -1) {
+                        Toast.makeText(this, "Please select a circle", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    String inviteeEmail = inviteeEmailInput.getText().toString().trim();
+
+                    if (inviteeEmail.isEmpty()) {
+                        inviteeEmailInput.setError("Email is required");
+                        inviteeEmailInput.requestFocus();
+                        return;
+                    }
+
+                    if (!android.util.Patterns.EMAIL_ADDRESS.matcher(inviteeEmail).matches()) {
+                        inviteeEmailInput.setError("Invalid email address");
+                        inviteeEmailInput.requestFocus();
+                        return;
+                    }
+
+                    // Check if inviting self
+                    if (inviteeEmail.equals(currentUserEmail)) {
+                        Toast.makeText(this, "You cannot invite yourself", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    SavingCircle selectedCircle = ownedCircles.get(selectedPosition);
+
+                    // Send invitation
+                    savingCircleViewModel.sendInvitation(selectedCircle.getId(), inviteeEmail,
+                            new SavingCircleViewModel.OnInvitationSentListener() {
+                                @Override
+                                public void onInvitationSent() {
+                                    Toast.makeText(SavingCircleLog.this,
+                                            "Invitation sent to " + inviteeEmail, Toast.LENGTH_SHORT).show();
+                                    dialog.dismiss();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    Toast.makeText(SavingCircleLog.this,
+                                            "Error: " + message, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                });
+            } else {
+                Toast.makeText(this, "You don't have any saving circles yet",
+                        Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            }
+        });
+
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 }

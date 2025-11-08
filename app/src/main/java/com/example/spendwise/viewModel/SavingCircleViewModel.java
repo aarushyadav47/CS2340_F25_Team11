@@ -593,6 +593,97 @@ public class SavingCircleViewModel extends ViewModel {
                 });
     }
 
+    // Add this to SavingCircleViewModel.java in the CYCLE MANAGEMENT METHODS section
+
+    /**
+     * Get the cycle that was active at a specific date (for viewing historical data)
+     * Different from getCurrentCycle which uses System.currentTimeMillis()
+     */
+    public void getCycleAtDate(String circleId, String memberEmail, long targetDate,
+                               OnCycleLoadedListener listener) {
+        if (savingCirclesRef == null) {
+            Log.e(TAG, "savingCirclesRef is null!");
+            listener.onError("Database reference is null");
+            return;
+        }
+
+        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+
+        savingCirclesRef.child(circleId)
+                .child("members")
+                .child(sanitizedEmail)
+                .child("cycles")
+                .get()
+                .addOnSuccessListener(dataSnapshot -> {
+                    MemberCycle targetCycle = null;
+
+                    Log.d(TAG, "Searching for cycle at date: " + new java.util.Date(targetDate)
+                            + " for member: " + memberEmail);
+
+                    // Find the cycle that contains the target date
+                    for (DataSnapshot cycleSnapshot : dataSnapshot.getChildren()) {
+                        MemberCycle cycle = cycleSnapshot.getValue(MemberCycle.class);
+                        if (cycle != null) {
+                            Log.d(TAG, "Checking cycle: " + cycle.getCycleId()
+                                    + " [" + new java.util.Date(cycle.getStartDate())
+                                    + " to " + new java.util.Date(cycle.getEndDate()) + "]");
+
+                            if (cycle.isDateInCycle(targetDate)) {
+                                targetCycle = cycle;
+                                Log.d(TAG, "Found matching cycle: " + cycle.getCycleId());
+                                break;
+                            }
+                        }
+                    }
+
+                    if (targetCycle != null) {
+                        listener.onCycleLoaded(targetCycle);
+                    } else {
+                        Log.w(TAG, "No cycle found for date: " + new java.util.Date(targetDate));
+                        listener.onCycleNotFound();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading cycle at date", e);
+                    listener.onError(e.getMessage());
+                });
+    }
+
+    /**
+     * Manually create a specific cycle for a member
+     */
+    public void createCycle(String circleId, String memberEmail, MemberCycle cycle,
+                            OnCycleCreatedListener listener) {
+        if (savingCirclesRef == null) {
+            Log.e(TAG, "savingCirclesRef is null!");
+            if (listener != null) listener.onError("Database reference is null");
+            return;
+        }
+
+        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+
+        savingCirclesRef.child(circleId)
+                .child("members")
+                .child(sanitizedEmail)
+                .child("cycles")
+                .child(cycle.getCycleId())
+                .setValue(cycle)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Cycle created: " + cycle.getCycleId());
+                    if (listener != null) listener.onCycleCreated(cycle);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error creating cycle", e);
+                    if (listener != null) listener.onError(e.getMessage());
+                });
+    }
+
+    // Add this callback interface at the end of the ViewModel class
+    public interface OnCycleCreatedListener {
+        void onCycleCreated(MemberCycle cycle);
+        void onError(String message);
+    }
+
     // ==================== NEW METHODS FOR SavingCircleDetailActivity ====================
 
     // Fetch a single SavingCircle by ID
