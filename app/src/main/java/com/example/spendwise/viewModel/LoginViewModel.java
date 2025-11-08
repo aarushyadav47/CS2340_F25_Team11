@@ -1,14 +1,10 @@
 package com.example.spendwise.viewModel;
 
-import android.content.Intent;
-import android.widget.Toast;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.example.spendwise.view.Dashboard;
-import com.example.spendwise.view.Login;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class LoginViewModel extends ViewModel {

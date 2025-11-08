@@ -2,7 +2,6 @@ package com.example.spendwise.view;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -41,11 +40,11 @@ public class Chatbot extends AppCompatActivity {
         );
 
         budgetNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Budget.class))
+                startActivity(new Intent(this, Budgetlog.class))
         );
 
         savingCircleNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircle.class))
+                startActivity(new Intent(this, SavingCircleLog.class))
         );
 
         chatbotNavigate.setOnClickListener(v ->

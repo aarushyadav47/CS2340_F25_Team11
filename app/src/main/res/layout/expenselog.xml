@@ -42,10 +42,21 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="Expense Log Content Goes Here"
+                android:text="Add an expense"
                 android:textColor="#AAAAAA"
                 android:visibility="gone"
                 android:textSize="16sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/expense_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="8dp"
+                android:layout_marginTop="60dp"
+                android:paddingBottom="96dp"
+                android:clipToPadding="false"
+                android:visibility="visible"/>
 
             <LinearLayout
                 android:id="@+id/form_Container"
@@ -54,7 +65,7 @@
                 android:layout_gravity="center"
                 android:orientation="vertical"
                 android:padding="24dp"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/expenseNameInputLayout"
@@ -174,6 +185,7 @@
                     android:textColor="@android:color/white" />
 
             </LinearLayout>
+
         </FrameLayout>
 
         <!-- Bottom Navi Bar -->
