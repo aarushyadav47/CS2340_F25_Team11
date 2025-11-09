@@ -13,3 +13,14 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Gradle cache files
+caches/
+daemon/
+native/
+wrapper/dists/
+android/
+*.lock
+
+# Build outputs
+build/
