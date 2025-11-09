@@ -7,6 +7,9 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.example.spendwise.factory.ChartFactory;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.PieChart;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -41,7 +44,8 @@ public class Dashboard extends AppCompatActivity {
     private BudgetViewModel budgetViewModel;
     private FirebaseAuth auth;
     private BudgetAdapter remainingBudgetsAdapter;
-
+    private PieChart pieChart;
+    private BarChart barChart;
 
     private Calendar currentSimulatedDate;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy",
@@ -79,6 +83,7 @@ public class Dashboard extends AppCompatActivity {
         setupQuickActions();
         setupBudgetCards();
         setupRemainingBudgetsButton();
+        setupCharts();
 
         // Load dashboard data
         loadDashboardData();
@@ -654,6 +659,32 @@ public class Dashboard extends AppCompatActivity {
                 == currentSimulatedDate.get(Calendar.MONTH)
                 && dateCalendar.get(Calendar.DAY_OF_MONTH)
                 == currentSimulatedDate.get(Calendar.DAY_OF_MONTH);
+    }
+
+    private void setupCharts() {
+        pieChart = findViewById(R.id.pieChart);
+        barChart = findViewById(R.id.barChart);
+
+        // Setup chart observers for real-time updates
+        expenseViewModel.getExpenses().observe(this, expenses -> {
+            if (expenses != null && !expenses.isEmpty()) {
+                pieChart.setData(ChartFactory.createCategoryPieChart(expenses));
+                pieChart.getDescription().setEnabled(false);
+                pieChart.invalidate();
+            }
+        });
+
+        budgetViewModel.getBudgets().observe(this, budgets -> {
+            if (budgets != null && !budgets.isEmpty() &&
+                    expenseViewModel.getExpenses().getValue() != null) {
+                barChart.setData(ChartFactory.createBudgetBarChart(
+                        budgets,
+                        expenseViewModel.getExpenses().getValue()
+                ));
+                barChart.getDescription().setEnabled(false);
+                barChart.invalidate();
+            }
+        });
     }
 
     @Override

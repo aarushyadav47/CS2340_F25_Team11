@@ -770,6 +770,20 @@ public class SavingCircleViewModel extends ViewModel {
             }
         });
 
+
+
         return membersLiveData;
     }
+
+    public void sendInvitation(String circleId, String inviteeEmail, OnInvitationSentListener listener) {
+        // Minimal version — this just simulates success
+        // Replace with Firebase or backend logic if you want real functionality
+        listener.onInvitationSent();
+    }
+
+    public interface OnInvitationSentListener {
+        void onInvitationSent();
+        void onError(String message);
+    }
+
 }
