@@ -31,6 +31,7 @@
         <activity android:name="com.example.spendwise.view.Budgetlog" />
         <activity android:name="com.example.spendwise.view.SavingCircleLog" />
         <activity android:name="com.example.spendwise.view.SavingCircleDetailActivity" />
+        <activity android:name="com.example.spendwise.view.InvitationsActivity" />
         <activity android:name="com.example.spendwise.view.BudgetDetails" />
     </application>
 

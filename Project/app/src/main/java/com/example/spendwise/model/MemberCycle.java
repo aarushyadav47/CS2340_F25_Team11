@@ -54,7 +54,7 @@ public class MemberCycle {
 
         newEndDate = calendar.getTimeInMillis();
 
-        return new MemberCycle(newStartDate, newEndDate, previousCycle.getEndAmount());
+        return new MemberCycle(newStartDate, newEndDate, previousCycle.getStartAmount());
     }
 
     // Helper method to check if a date falls within this cycle
@@ -73,6 +73,17 @@ public class MemberCycle {
         this.spent += amount;
         if (this.endAmount < 0) {
             this.endAmount = 0;
+        }
+    }
+
+    public void restoreExpense(double amount) {
+        this.endAmount += amount;
+        if (this.endAmount > this.startAmount + this.contributed) {
+            this.endAmount = this.startAmount + this.contributed;
+        }
+        this.spent -= amount;
+        if (this.spent < 0) {
+            this.spent = 0;
         }
     }
 

@@ -8,6 +8,7 @@ import com.example.spendwise.model.SavingCircle;
 import com.example.spendwise.model.SavingCircleMember;
 import com.example.spendwise.model.MemberCycle;
 import com.example.spendwise.model.Firebase;
+import com.example.spendwise.model.SavingCircleInvitation;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -22,6 +23,8 @@ import androidx.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SavingCircleViewModel extends ViewModel {
     private static final String TAG = "SavingCircleViewModel";
@@ -29,18 +32,23 @@ public class SavingCircleViewModel extends ViewModel {
     private MutableLiveData<String> statusMessage;
     private MutableLiveData<List<SavingCircle>> savingCircles;
     private MutableLiveData<String> currentUserEmail;
+    private MutableLiveData<List<SavingCircleInvitation>> invitations;
     private FirebaseDatabase database;
     private DatabaseReference savingCirclesRef;
+    private DatabaseReference invitationsRootRef;
     private FirebaseAuth auth;
+    private ValueEventListener invitationsListener;
 
     public SavingCircleViewModel() {
         savingCircles = new MutableLiveData<>(new ArrayList<>());
         statusMessage = new MutableLiveData<>();
         currentUserEmail = new MutableLiveData<>();
+        invitations = new MutableLiveData<>(new ArrayList<>());
 
         // Initialize Firebase
         database = Firebase.getDatabase();
         auth = FirebaseAuth.getInstance();
+        invitationsRootRef = database.getReference("invitations");
 
         // Load current user email
         loadCurrentUserEmail();
@@ -59,6 +67,7 @@ public class SavingCircleViewModel extends ViewModel {
             String email = currentUser.getEmail();
             currentUserEmail.setValue(email);
             Log.d(TAG, "Current user email loaded: " + email);
+            attachInvitationListener(email);
         } else {
             Log.e(TAG, "No user logged in!");
             currentUserEmail.setValue("");
@@ -81,6 +90,44 @@ public class SavingCircleViewModel extends ViewModel {
             Log.e(TAG, "No user logged in!");
             statusMessage.setValue("Please log in to manage saving circles");
         }
+    }
+
+    private void attachInvitationListener(String email) {
+        if (email == null || email.isEmpty() || invitationsRootRef == null) {
+            return;
+        }
+
+        String sanitizedEmail = sanitizeEmail(email);
+
+        if (invitationsListener != null) {
+            invitationsRootRef.child(sanitizedEmail).removeEventListener(invitationsListener);
+        }
+
+        invitationsListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<SavingCircleInvitation> invitationList = new ArrayList<>();
+                for (DataSnapshot invitationSnapshot : snapshot.getChildren()) {
+                    SavingCircleInvitation invitation = invitationSnapshot.getValue(SavingCircleInvitation.class);
+                    if (invitation != null) {
+                        invitationList.add(invitation);
+                    }
+                }
+                invitations.setValue(invitationList);
+                Log.d(TAG, "Loaded " + invitationList.size() + " invitations for " + email);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error loading invitations: " + error.getMessage());
+            }
+        };
+
+        invitationsRootRef.child(sanitizedEmail).addValueEventListener(invitationsListener);
+    }
+
+    public LiveData<List<SavingCircleInvitation>> getInvitations() {
+        return invitations;
     }
 
     public LiveData<List<SavingCircle>> getSavingCircles() {
@@ -132,7 +179,7 @@ public class SavingCircleViewModel extends ViewModel {
         }
 
         SavingCircleMember member = new SavingCircleMember(memberEmail, personalAllocation, joinTimestamp);
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -147,6 +194,117 @@ public class SavingCircleViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error adding member to circle", e);
+                });
+    }
+
+    // ==================== INVITATION METHODS ====================
+
+    public void sendInvitation(String circleId, String inviteeEmail, OnInvitationSentListener listener) {
+        if (savingCirclesRef == null || invitationsRootRef == null) {
+            if (listener != null) listener.onError("Database reference not initialized");
+            return;
+        }
+
+        savingCirclesRef.child(circleId).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists()) {
+                        if (listener != null) listener.onError("Saving circle not found");
+                        return;
+                    }
+
+                    String groupName = snapshot.child("groupName").getValue(String.class);
+                    String challengeTitle = snapshot.child("challengeTitle").getValue(String.class);
+                    Double goalAmount = snapshot.child("goalAmount").getValue(Double.class);
+                    String frequency = snapshot.child("frequency").getValue(String.class);
+                    String inviterEmail = currentUserEmail.getValue();
+
+                    if (groupName == null || challengeTitle == null || goalAmount == null) {
+                        if (listener != null) listener.onError("Circle data incomplete");
+                        return;
+                    }
+
+                    SavingCircleInvitation invitation = new SavingCircleInvitation(
+                            circleId,
+                            groupName,
+                            challengeTitle,
+                            inviterEmail != null ? inviterEmail : "",
+                            inviteeEmail,
+                            goalAmount,
+                            frequency != null ? frequency : "Monthly"
+                    );
+
+                    String sanitizedInvitee = sanitizeEmail(inviteeEmail);
+                    invitationsRootRef.child(sanitizedInvitee)
+                            .child(invitation.getInvitationId())
+                            .setValue(invitation)
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d(TAG, "Invitation sent to " + inviteeEmail);
+                                if (listener != null) listener.onInvitationSent();
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error sending invitation", e);
+                                if (listener != null) listener.onError(e.getMessage());
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching circle for invitation", e);
+                    if (listener != null) listener.onError(e.getMessage());
+                });
+    }
+
+    public void acceptInvitation(SavingCircleInvitation invitation, OnInvitationActionListener listener) {
+        if (invitation == null) {
+            if (listener != null) listener.onError("Invitation not found");
+            return;
+        }
+
+        long responseTimestamp = System.currentTimeMillis();
+        double allocation = invitation.getGoalAmount() > 0 ? invitation.getGoalAmount() : 0;
+        String frequency = invitation.getFrequency() != null ? invitation.getFrequency() : "Monthly";
+
+        addMemberToCircle(invitation.getCircleId(),
+                invitation.getInviteeEmail(),
+                allocation,
+                responseTimestamp,
+                frequency);
+
+        updateInvitationStatus(invitation, "accepted", responseTimestamp, listener);
+    }
+
+    public void declineInvitation(SavingCircleInvitation invitation, OnInvitationActionListener listener) {
+        if (invitation == null) {
+            if (listener != null) listener.onError("Invitation not found");
+            return;
+        }
+
+        long responseTimestamp = System.currentTimeMillis();
+        updateInvitationStatus(invitation, "declined", responseTimestamp, listener);
+    }
+
+    private void updateInvitationStatus(SavingCircleInvitation invitation,
+                                        String status,
+                                        long respondedAt,
+                                        OnInvitationActionListener listener) {
+        if (invitationsRootRef == null) {
+            if (listener != null) listener.onError("Database reference not initialized");
+            return;
+        }
+
+        String sanitizedInvitee = sanitizeEmail(invitation.getInviteeEmail());
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", status);
+        updates.put("respondedAt", respondedAt);
+
+        invitationsRootRef.child(sanitizedInvitee)
+                .child(invitation.getInvitationId())
+                .updateChildren(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Invitation " + status + " for " + invitation.getInviteeEmail());
+                    if (listener != null) listener.onSuccess();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error updating invitation status", e);
+                    if (listener != null) listener.onError(e.getMessage());
                 });
     }
 
@@ -175,7 +333,7 @@ public class SavingCircleViewModel extends ViewModel {
         // Create first cycle
         MemberCycle firstCycle = new MemberCycle(joinDate, endDate, startAmount);
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -198,7 +356,7 @@ public class SavingCircleViewModel extends ViewModel {
                                 OnCycleLoadedListener listener) {
         if (savingCirclesRef == null) return;
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -265,7 +423,7 @@ public class SavingCircleViewModel extends ViewModel {
      * Complete a cycle and mark it as finished
      */
     private void completeCycle(String circleId, String memberEmail, MemberCycle cycle) {
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         cycle.setComplete(true);
 
@@ -285,7 +443,7 @@ public class SavingCircleViewModel extends ViewModel {
      */
     private void createNextCycle(String circleId, String memberEmail,
                                  MemberCycle previousCycle, String frequency) {
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         MemberCycle nextCycle = MemberCycle.createNextCycle(previousCycle, frequency);
 
@@ -309,7 +467,7 @@ public class SavingCircleViewModel extends ViewModel {
             public void onCycleLoaded(MemberCycle cycle) {
                 cycle.recordExpense(amount);
 
-                String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+                String sanitizedEmail = sanitizeEmail(memberEmail);
 
                 savingCirclesRef.child(circleId)
                         .child("members")
@@ -331,6 +489,34 @@ public class SavingCircleViewModel extends ViewModel {
         });
     }
 
+    public void restoreExpenseInCycle(String circleId, String memberEmail, double amount) {
+        getCurrentCycle(circleId, memberEmail, new OnCycleLoadedListener() {
+            @Override
+            public void onCycleLoaded(MemberCycle cycle) {
+                cycle.restoreExpense(amount);
+
+                String sanitizedEmail = sanitizeEmail(memberEmail);
+
+                savingCirclesRef.child(circleId)
+                        .child("members")
+                        .child(sanitizedEmail)
+                        .child("cycles")
+                        .child(cycle.getCycleId())
+                        .setValue(cycle);
+            }
+
+            @Override
+            public void onCycleNotFound() {
+                Log.w(TAG, "Cannot restore expense - no active cycle");
+            }
+
+            @Override
+            public void onError(String message) {
+                Log.e(TAG, "Error restoring expense: " + message);
+            }
+        });
+    }
+
     /**
      * Get all cycles for a member (for history view)
      */
@@ -339,7 +525,7 @@ public class SavingCircleViewModel extends ViewModel {
 
         if (savingCirclesRef == null) return cycles;
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -388,7 +574,7 @@ public class SavingCircleViewModel extends ViewModel {
             return;
         }
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         // Get current amount first
         savingCirclesRef.child(circleId)
@@ -414,6 +600,7 @@ public class SavingCircleViewModel extends ViewModel {
                                 .setValue(newAmount)
                                 .addOnSuccessListener(aVoid -> {
                                     Log.d(TAG, "Expense deducted from member's current amount");
+                    recordExpenseInCycle(circleId, memberEmail, expenseAmount);
                                 })
                                 .addOnFailureListener(e -> {
                                     Log.e(TAG, "Error deducting expense", e);
@@ -429,7 +616,7 @@ public class SavingCircleViewModel extends ViewModel {
     public void addBackExpenseToMember(String circleId, String memberEmail, double expenseAmount) {
         if (savingCirclesRef == null) return;
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -449,8 +636,7 @@ public class SavingCircleViewModel extends ViewModel {
                                 .setValue(newAmount)
                                 .addOnSuccessListener(aVoid -> {
                                     Log.d(TAG, "Expense amount added back");
-
-                                    // TODO: Also update the cycle if needed
+                    restoreExpenseInCycle(circleId, memberEmail, expenseAmount);
                                 })
                                 .addOnFailureListener(e -> {
                                     Log.e(TAG, "Error adding back expense", e);
@@ -466,7 +652,7 @@ public class SavingCircleViewModel extends ViewModel {
     public void updateMemberCurrentAmount(String circleId, String memberEmail, double newAmount) {
         if (savingCirclesRef == null) return;
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -607,7 +793,7 @@ public class SavingCircleViewModel extends ViewModel {
             return;
         }
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -660,7 +846,7 @@ public class SavingCircleViewModel extends ViewModel {
             return;
         }
 
-        String sanitizedEmail = memberEmail.replace(".", "_").replace("@", "_at_");
+        String sanitizedEmail = sanitizeEmail(memberEmail);
 
         savingCirclesRef.child(circleId)
                 .child("members")
@@ -681,6 +867,16 @@ public class SavingCircleViewModel extends ViewModel {
     // Add this callback interface at the end of the ViewModel class
     public interface OnCycleCreatedListener {
         void onCycleCreated(MemberCycle cycle);
+        void onError(String message);
+    }
+
+    public interface OnInvitationSentListener {
+        void onInvitationSent();
+        void onError(String message);
+    }
+
+    public interface OnInvitationActionListener {
+        void onSuccess();
         void onError(String message);
     }
 
@@ -771,5 +967,23 @@ public class SavingCircleViewModel extends ViewModel {
         });
 
         return membersLiveData;
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        if (invitationsListener != null && invitationsRootRef != null) {
+            String email = currentUserEmail.getValue();
+            if (email != null && !email.isEmpty()) {
+                invitationsRootRef.child(sanitizeEmail(email)).removeEventListener(invitationsListener);
+            }
+        }
+    }
+
+    private String sanitizeEmail(String email) {
+        if (email == null) {
+            return "";
+        }
+        return email.replace(".", "_").replace("@", "_at_");
     }
 }

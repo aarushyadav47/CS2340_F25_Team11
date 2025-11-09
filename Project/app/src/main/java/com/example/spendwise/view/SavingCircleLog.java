@@ -100,8 +100,8 @@ public class SavingCircleLog extends AppCompatActivity {
 
         inviteButton.setOnClickListener(v -> showInviteDialog());
         viewInvitationsButton.setOnClickListener(v -> {
-            Intent intent = new Intent(this, InvitationsActivity.class);
-            startActivity(intent);
+            Intent invitationsIntent = new Intent(this, InvitationsActivity.class);
+            startActivity(invitationsIntent);
         });
     }
 

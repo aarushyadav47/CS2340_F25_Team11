@@ -20,9 +20,17 @@ import com.example.spendwise.model.Budget;
 import com.example.spendwise.model.Expense;
 import com.example.spendwise.viewModel.BudgetViewModel;
 import com.example.spendwise.viewModel.ExpenseViewModel;
+import com.example.spendwise.viewModel.DashboardAnalyticsViewModel;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.example.spendwise.adapter.BudgetAdapter;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.PieData;
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -39,8 +47,13 @@ public class Dashboard extends AppCompatActivity {
     private DashboardBinding binding;
     private ExpenseViewModel expenseViewModel;
     private BudgetViewModel budgetViewModel;
+    private DashboardAnalyticsViewModel dashboardAnalyticsViewModel;
     private FirebaseAuth auth;
     private BudgetAdapter remainingBudgetsAdapter;
+
+    private PieChart pieChart;
+    private BarChart budgetBarChart;
+    private final List<String> budgetLabels = new ArrayList<>();
 
 
     private Calendar currentSimulatedDate;
@@ -66,7 +79,15 @@ public class Dashboard extends AppCompatActivity {
         // Initialize ViewModels
         expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class);
         budgetViewModel = new ViewModelProvider(this).get(BudgetViewModel.class);
+        dashboardAnalyticsViewModel = new ViewModelProvider(this).get(DashboardAnalyticsViewModel.class);
         binding.setLifecycleOwner(this);
+
+        pieChart = findViewById(R.id.spending_pie_chart);
+        budgetBarChart = findViewById(R.id.budget_usage_bar_chart);
+
+        setupPieChart();
+        setupBudgetBarChart();
+        observeAnalyticsData();
 
         // Load or initialize simulated date
         loadSimulatedDate();
@@ -82,6 +103,95 @@ public class Dashboard extends AppCompatActivity {
 
         // Load dashboard data
         loadDashboardData();
+    }
+
+    private void setupPieChart() {
+        pieChart.setUsePercentValues(true);
+        pieChart.getDescription().setEnabled(false);
+        pieChart.setDrawHoleEnabled(true);
+        pieChart.setHoleRadius(40f);
+        pieChart.setTransparentCircleRadius(45f);
+        pieChart.setEntryLabelColor(android.graphics.Color.BLACK);
+        pieChart.setEntryLabelTextSize(11f);
+        Legend legend = pieChart.getLegend();
+        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
+        legend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        legend.setDrawInside(false);
+    }
+
+    private void setupBudgetBarChart() {
+        budgetBarChart.setDrawGridBackground(false);
+        budgetBarChart.setDrawBarShadow(false);
+        budgetBarChart.setHighlightFullBarEnabled(false);
+        budgetBarChart.getDescription().setEnabled(false);
+
+        XAxis xAxis = budgetBarChart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setGranularity(1f);
+        xAxis.setCenterAxisLabels(true);
+        xAxis.setDrawGridLines(false);
+
+        budgetBarChart.getAxisLeft().setAxisMinimum(0f);
+        budgetBarChart.getAxisRight().setAxisMinimum(0f);
+        budgetBarChart.getAxisRight().setDrawLabels(false);
+
+        Legend legend = budgetBarChart.getLegend();
+        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
+        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.RIGHT);
+        legend.setOrientation(Legend.LegendOrientation.VERTICAL);
+        legend.setDrawInside(false);
+    }
+
+    private void observeAnalyticsData() {
+        dashboardAnalyticsViewModel.getSpendingByCategoryData().observe(this, pieData -> {
+            if (pieData == null) {
+                return;
+            }
+            pieData.setValueFormatter(new com.github.mikephil.charting.formatter.PercentFormatter(pieChart));
+            pieChart.setData(pieData);
+            pieChart.highlightValues(null);
+            pieChart.invalidate();
+        });
+
+        dashboardAnalyticsViewModel.getBudgetUsageLabels().observe(this, labels -> {
+            budgetLabels.clear();
+            if (labels != null) {
+                budgetLabels.addAll(labels);
+            }
+            XAxis xAxis = budgetBarChart.getXAxis();
+            xAxis.setValueFormatter(new IndexAxisValueFormatter(budgetLabels));
+            xAxis.setLabelCount(Math.max(budgetLabels.size(), 1));
+        });
+
+        dashboardAnalyticsViewModel.getBudgetUsageData().observe(this, barData -> {
+            if (barData == null) {
+                return;
+            }
+
+            float groupSpace = 0.2f;
+            float barSpace = 0.05f;
+            float barWidth = 0.35f;
+
+            barData.setBarWidth(barWidth);
+            budgetBarChart.setData(barData);
+
+            int groupCount = budgetLabels.size();
+            if (groupCount == 0 && barData.getDataSetCount() > 0) {
+                groupCount = barData.getDataSetByIndex(0).getEntryCount();
+            }
+            if (groupCount == 0) {
+                groupCount = 1;
+            }
+            budgetBarChart.getXAxis().setAxisMinimum(0f);
+            budgetBarChart.getXAxis().setAxisMaximum(0f + budgetBarChart.getBarData().getGroupWidth(groupSpace, barSpace) * groupCount);
+
+            if (barData.getDataSetCount() > 1) {
+                budgetBarChart.groupBars(0f, groupSpace, barSpace);
+            }
+
+            budgetBarChart.invalidate();
+        });
     }
 
     private void loadSimulatedDate() {
@@ -416,6 +526,8 @@ public class Dashboard extends AppCompatActivity {
         Calendar monthEnd = (Calendar) currentSimulatedDate.clone();
         monthEnd.set(Calendar.DAY_OF_MONTH,
                 monthEnd.getActualMaximum(Calendar.DAY_OF_MONTH));
+
+        dashboardAnalyticsViewModel.updateWindow(monthStart.getTime(), monthEnd.getTime());
 
         // Load expenses and calculate totals
         expenseViewModel.getExpenses().observe(this, expenses -> {
