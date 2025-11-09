@@ -11,14 +11,17 @@ import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.PieData;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Tests for ChartFactory (Factory Pattern)
- * Tests Sprint 3 design pattern and analytics functionality
+ * Tests Sprint 3 design pattern and analytics functionality.
  */
+@RunWith(RobolectricTestRunner.class)
 public class ChartFactoryTest {
 
     @Test

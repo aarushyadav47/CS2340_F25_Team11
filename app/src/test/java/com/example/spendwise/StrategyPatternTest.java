@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Tests for Strategy Pattern implementation
@@ -75,8 +76,14 @@ public class StrategyPatternTest {
         dateStrategy.sort(expenses1);
         amountStrategy.sort(expenses2);
 
+        String dateOrdering = expenses1.stream()
+                .map(Expense::getName)
+                .collect(Collectors.joining(","));
+        String amountOrdering = expenses2.stream()
+                .map(Expense::getName)
+                .collect(Collectors.joining(","));
+
         assertTrue("Different strategies should produce different orderings",
-                !expenses1.get(0).getDate().equals(expenses2.get(0).getDate()) ||
-                expenses1.get(0).getAmount() != expenses2.get(0).getAmount());
+                !dateOrdering.equals(amountOrdering));
     }
 }
