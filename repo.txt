@@ -1,2 +1,2 @@
 Suhani-Gandhi29/CS2340_F25_Team11
-auth=github_pat_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
+auth=github_pat_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
