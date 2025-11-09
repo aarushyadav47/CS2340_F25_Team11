@@ -4,6 +4,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -16,53 +19,45 @@ import com.example.spendwise.adapter.SavingCircleAdapter;
 import com.example.spendwise.databinding.SavingcirclelogBinding;
 import com.example.spendwise.model.SavingCircle;
 import com.example.spendwise.viewModel.SavingCircleViewModel;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import com.google.android.material.textfield.TextInputEditText;
-
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.Toast;
-
 public class SavingCircleLog extends AppCompatActivity {
     private SavingCircleViewModel savingCircleViewModel;
-    private Calendar calendar = Calendar.getInstance();
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
-    private long dashboardTimestamp; // Store dashboard date as timestamp
+    private final Calendar calendar = Calendar.getInstance();
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    private long dashboardTimestamp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Using data binding to inflate the layout
         SavingcirclelogBinding binding = SavingcirclelogBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // ViewModel setup
         savingCircleViewModel = new ViewModelProvider(this).get(SavingCircleViewModel.class);
         binding.setLifecycleOwner(this);
 
-        // Receive Dashboard-selected date
         Intent intent = getIntent();
         String dashboardDate = intent.getStringExtra("selected_date");
         if (dashboardDate != null && !dashboardDate.isEmpty()) {
             try {
                 Date date = dateFormat.parse(dashboardDate);
                 calendar.setTime(date);
-                dashboardTimestamp = date.getTime(); // Convert to timestamp
+                dashboardTimestamp = date.getTime();
             } catch (ParseException e) {
                 e.printStackTrace();
-                dashboardTimestamp = System.currentTimeMillis(); // Fallback to current time
+                dashboardTimestamp = System.currentTimeMillis();
             }
         } else {
-            dashboardTimestamp = System.currentTimeMillis(); // Fallback to current time
+            dashboardTimestamp = System.currentTimeMillis();
         }
 
         setupNavBar(dashboardDate);
@@ -72,7 +67,6 @@ public class SavingCircleLog extends AppCompatActivity {
         View savingCircleMsg = findViewById(R.id.savingCircle_msg);
         View savingCircleRecycler = findViewById(R.id.savingCircle_recycler_view);
 
-        // Add Circle button
         View addCircleButton = findViewById(R.id.add_savingCircle_button);
         addCircleButton.setOnClickListener(v -> {
             clearForm();
@@ -82,7 +76,6 @@ public class SavingCircleLog extends AppCompatActivity {
             savingCircleMsg.setVisibility(View.GONE);
         });
 
-        // Setup frequency dropdown
         String[] freqOptions = {"Weekly", "Monthly"};
         ArrayAdapter<String> freqAdapter = new ArrayAdapter<>(this,
                 R.layout.dropdown_item, freqOptions);
@@ -97,10 +90,11 @@ public class SavingCircleLog extends AppCompatActivity {
 
         View inviteButton = findViewById(R.id.invite_button);
         View viewInvitationsButton = findViewById(R.id.view_invitations_button);
+
         inviteButton.setOnClickListener(v -> showInviteDialog());
         viewInvitationsButton.setOnClickListener(v -> {
-            Intent invitationIntent = new Intent(this, InvitationsActivity.class);
-            startActivity(invitationIntent);
+            Intent invitationsIntent = new Intent(this, InvitationsActivity.class);
+            startActivity(invitationsIntent);
         });
     }
 
@@ -128,7 +122,6 @@ public class SavingCircleLog extends AppCompatActivity {
     }
 
     private void saveSavingCircle() {
-        // Get all input fields
         TextInputEditText groupNameInput = findViewById(R.id.groupNameInput);
         TextInputEditText creatorEmailInput = findViewById(R.id.creatorEmailInput);
         TextInputEditText challengeTitleInput = findViewById(R.id.challengeTitleInput);
@@ -137,7 +130,6 @@ public class SavingCircleLog extends AppCompatActivity {
         AutoCompleteTextView frequencyInput = findViewById(R.id.frequencyInput);
         TextInputEditText notesInput = findViewById(R.id.notesInput);
 
-        // Get the text from each field
         String groupName = groupNameInput.getText().toString().trim();
         String creatorEmail = creatorEmailInput.getText().toString().trim();
         String challengeTitle = challengeTitleInput.getText().toString().trim();
@@ -146,28 +138,24 @@ public class SavingCircleLog extends AppCompatActivity {
         String frequency = frequencyInput.getText().toString().trim();
         String notes = notesInput.getText().toString().trim();
 
-        // Validation - Group Name
         if (groupName.isEmpty()) {
             groupNameInput.setError("Group name is required");
             groupNameInput.requestFocus();
             return;
         }
 
-        // Validation - Creator Email (should be auto-filled, but check anyway)
         if (creatorEmail.isEmpty()) {
             creatorEmailInput.setError("Creator email is required");
             creatorEmailInput.requestFocus();
             return;
         }
 
-        // Validation - Challenge Title
         if (challengeTitle.isEmpty()) {
             challengeTitleInput.setError("Challenge title is required");
             challengeTitleInput.requestFocus();
             return;
         }
 
-        // Validation - Goal Amount
         if (goalAmountStr.isEmpty()) {
             goalAmountInput.setError("Goal amount is required");
             goalAmountInput.requestFocus();
@@ -188,7 +176,6 @@ public class SavingCircleLog extends AppCompatActivity {
             return;
         }
 
-        // Validation - Personal Allocation
         if (personalAllocationStr.isEmpty()) {
             personalAllocationInput.setError("Personal allocation is required");
             personalAllocationInput.requestFocus();
@@ -203,7 +190,6 @@ public class SavingCircleLog extends AppCompatActivity {
                 personalAllocationInput.requestFocus();
                 return;
             }
-            // Optional: Check if personal allocation exceeds goal amount
             if (personalAllocation > goalAmount) {
                 personalAllocationInput.setError("Cannot exceed goal amount");
                 personalAllocationInput.requestFocus();
@@ -215,27 +201,21 @@ public class SavingCircleLog extends AppCompatActivity {
             return;
         }
 
-        // Validation - Frequency
         if (frequency.isEmpty()) {
             frequencyInput.setError("Frequency is required");
             frequencyInput.requestFocus();
             return;
         }
 
-        // Validate frequency is either "Weekly" or "Monthly"
         if (!frequency.equals("Weekly") && !frequency.equals("Monthly")) {
             frequencyInput.setError("Please select a valid frequency");
             frequencyInput.requestFocus();
             return;
         }
 
-        // Notes are optional, so no validation needed
-
-        // UPDATED: Pass dashboardTimestamp and frequency to ViewModel
         savingCircleViewModel.addSavingCircle(groupName, creatorEmail, challengeTitle,
                 goalAmount, frequency, notes, personalAllocation, dashboardTimestamp);
 
-        // Hide form, show RecyclerView
         View formContainer = findViewById(R.id.form_Container);
         View formScrollView = findViewById(R.id.form_scroll_view);
         View recyclerView = findViewById(R.id.savingCircle_recycler_view);
@@ -264,7 +244,6 @@ public class SavingCircleLog extends AppCompatActivity {
         frequencyInput.setText("");
         notesInput.setText("");
 
-        // Clear any errors
         groupNameInput.setError(null);
         challengeTitleInput.setError(null);
         goalAmountInput.setError(null);
@@ -279,23 +258,20 @@ public class SavingCircleLog extends AppCompatActivity {
         SavingCircleAdapter adapter = new SavingCircleAdapter();
         recyclerView.setAdapter(adapter);
 
-        // Observe savingCircles from Firebase
         savingCircleViewModel.getSavingCircles().observe(this, savingCircles -> {
             adapter.setSavingCircles(savingCircles);
             View savingCircleMsg = findViewById(R.id.savingCircle_msg);
             savingCircleMsg.setVisibility(savingCircles.isEmpty() ? View.VISIBLE : View.GONE);
         });
 
-        // Pass the dashboard timestamp to detail activity
         adapter.setOnItemClickListener(savingCircle -> {
-            Intent intent = new Intent(this, SavingCircleDetailActivity.class);
-            intent.putExtra("CIRCLE_ID", savingCircle.getId());
-            intent.putExtra("SELECTED_DATE", dashboardTimestamp);
+            Intent detailIntent = new Intent(this, SavingCircleDetailActivity.class);
+            detailIntent.putExtra("CIRCLE_ID", savingCircle.getId());
+            detailIntent.putExtra("SELECTED_DATE", dashboardTimestamp);
             Log.d("SavingCircleLog", "Opening detail with date: " + dateFormat.format(dashboardTimestamp));
-            startActivity(intent);
+            startActivity(detailIntent);
         });
 
-        // Swipe to delete
         setupSwipeToDelete(recyclerView, adapter);
     }
 
@@ -326,33 +302,26 @@ public class SavingCircleLog extends AppCompatActivity {
         savingCircleViewModel.getCurrentUserEmail().observe(this, email -> {
             if (email != null && !email.isEmpty()) {
                 creatorEmailInput.setText(email);
-                // Make it read-only so users can't change it
                 creatorEmailInput.setEnabled(false);
                 creatorEmailInput.setFocusable(false);
             }
         });
     }
 
-
-    // Add this method to show the invitation dialog
     private void showInviteDialog() {
-        // Create dialog
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_send_invitation, null);
         builder.setView(dialogView);
 
         android.app.AlertDialog dialog = builder.create();
 
-        // Get views from dialog
         AutoCompleteTextView circleDropdown = dialogView.findViewById(R.id.circleDropdown);
         TextInputEditText inviteeEmailInput = dialogView.findViewById(R.id.inviteeEmailInput);
         View sendButton = dialogView.findViewById(R.id.sendButton);
         View cancelButton = dialogView.findViewById(R.id.cancelButton);
 
-        // Load user's circles into dropdown
         savingCircleViewModel.getSavingCircles().observe(this, circles -> {
             if (circles != null && !circles.isEmpty()) {
-                // Filter to only show circles where user is the creator
                 List<SavingCircle> ownedCircles = new ArrayList<>();
                 String currentUserEmail = savingCircleViewModel.getCurrentUserEmail().getValue();
 
@@ -369,7 +338,6 @@ public class SavingCircleLog extends AppCompatActivity {
                     return;
                 }
 
-                // Create dropdown items with circle names
                 String[] circleNames = new String[ownedCircles.size()];
                 for (int i = 0; i < ownedCircles.size(); i++) {
                     circleNames[i] = ownedCircles.get(i).getGroupName() + " - " +
@@ -380,12 +348,10 @@ public class SavingCircleLog extends AppCompatActivity {
                         android.R.layout.simple_dropdown_item_1line, circleNames);
                 circleDropdown.setAdapter(adapter);
 
-                // Handle send button click
                 sendButton.setOnClickListener(v -> {
                     int selectedPosition = -1;
                     String selectedText = circleDropdown.getText().toString();
 
-                    // Find which circle was selected
                     for (int i = 0; i < circleNames.length; i++) {
                         if (circleNames[i].equals(selectedText)) {
                             selectedPosition = i;
@@ -412,7 +378,6 @@ public class SavingCircleLog extends AppCompatActivity {
                         return;
                     }
 
-                    // Check if inviting self
                     if (inviteeEmail.equals(currentUserEmail)) {
                         Toast.makeText(this, "You cannot invite yourself", Toast.LENGTH_SHORT).show();
                         return;
@@ -420,7 +385,6 @@ public class SavingCircleLog extends AppCompatActivity {
 
                     SavingCircle selectedCircle = ownedCircles.get(selectedPosition);
 
-                    // Send invitation
                     savingCircleViewModel.sendInvitation(selectedCircle.getId(), inviteeEmail,
                             new SavingCircleViewModel.OnInvitationSentListener() {
                                 @Override
