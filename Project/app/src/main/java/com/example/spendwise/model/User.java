@@ -1,5 +1,4 @@
 package com.example.spendwise.model;
-
 public class User {
     // Attributs
     private String id;

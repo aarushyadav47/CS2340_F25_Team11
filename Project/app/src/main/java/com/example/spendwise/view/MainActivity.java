@@ -22,6 +22,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         FirebaseApp.initializeApp(this);
 
+        //Binding viewmodel to the layout
+        // binding.setVariable(BR.viewModel, viewModel);
+        // binding.setLifecycleOwner(this);
+        // the viewmodel is binded by this file - not destroyed by rotations
+
         Button openBtn = findViewById(R.id.start_button);
         openBtn.setOnClickListener(new View.OnClickListener() {
             @Override
