@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/popup_background">
+
+    <!-- Popup Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Budget Calculator"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal"
+        android:paddingBottom="16dp"
+        android:textColor="#000000"/>
+
+    <!-- Total Budget Input -->
+    <EditText
+        android:id="@+id/total_budget_input"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:hint="Total Budget"
+        android:inputType="numberDecimal"
+        android:layout_marginBottom="12dp"
+        android:layout_gravity="center_horizontal"
+        android:padding="12dp"/>
+
+    <!-- Spent-to-Date Input -->
+    <EditText
+        android:id="@+id/spent_input"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:hint="Spent-to-Date"
+        android:inputType="numberDecimal"
+        android:layout_marginBottom="12dp"
+        android:layout_gravity="center_horizontal"
+        android:padding="12dp"/>
+
+    <!-- Remaining Input -->
+    <EditText
+        android:id="@+id/remaining_input"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:hint="Remaining"
+        android:inputType="numberDecimal"
+        android:layout_marginBottom="16dp"
+        android:layout_gravity="center_horizontal"
+        android:padding="12dp"/>
+
+    <!-- Calculate Button -->
+    <Button
+        android:id="@+id/calculate_button"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:text="Calculate"
+        android:layout_gravity="center_horizontal"
+        android:backgroundTint="#000000"
+        android:textColor="@android:color/white"/>
+</LinearLayout>
