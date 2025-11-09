@@ -91,5 +91,3 @@ public class SavingCircleMemberTest {
         assertFalse("Negative is not acceptable", negativeAllocation >= 0);
     }
 }
-
-

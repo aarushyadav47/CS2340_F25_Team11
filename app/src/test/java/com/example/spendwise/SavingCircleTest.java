@@ -56,5 +56,3 @@ public class SavingCircleTest {
                 invalidFrequency.equals("Weekly") || invalidFrequency.equals("Monthly"));
     }
 }
-
-
