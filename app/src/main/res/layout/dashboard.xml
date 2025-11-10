@@ -185,8 +185,7 @@
                     android:textColor="@android:color/white"
                     app:icon="@drawable/ic_budget"
                     app:iconTint="@android:color/white"
-                    app:iconGravity="textStart"
-                    android:contentDescription="View remaining budgets button"/>
+                    app:iconGravity="textStart"/>
 
                 <!-- Remaining Budgets List (Initially Hidden) -->
                 <androidx.recyclerview.widget.RecyclerView
@@ -208,8 +207,6 @@
                     android:contentDescription="Spending by category heading"
                     android:labelFor="@+id/spending_pie_chart"
                     android:accessibilityHeading="true"
-                    android:contentDescription="Spending by category heading"
-                    android:labelFor="@+id/spending_pie_chart"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -222,9 +219,6 @@
                     android:focusable="true"
                     android:importantForAccessibility="yes"
                     android:layout_marginBottom="24dp"
-                    android:contentDescription="Spending by category chart"
-                    android:focusable="true"
-                    android:importantForAccessibility="yes"
                     android:background="@android:color/white"
                     android:padding="12dp"/>
 
@@ -237,8 +231,6 @@
                     android:contentDescription="Budget usage heading"
                     android:labelFor="@+id/budget_usage_bar_chart"
                     android:accessibilityHeading="true"
-                    android:contentDescription="Budget usage heading"
-                    android:labelFor="@+id/budget_usage_bar_chart"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -251,9 +243,6 @@
                     android:focusable="true"
                     android:importantForAccessibility="yes"
                     android:layout_marginBottom="24dp"
-                    android:contentDescription="Budget usage chart"
-                    android:focusable="true"
-                    android:importantForAccessibility="yes"
                     android:background="@android:color/white"
                     android:padding="12dp"/>
 
@@ -266,7 +255,6 @@
                     android:text="Budget Overview"
                     android:contentDescription="Budget overview heading"
                     android:accessibilityHeading="true"
-                    android:contentDescription="Budget overview heading"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
