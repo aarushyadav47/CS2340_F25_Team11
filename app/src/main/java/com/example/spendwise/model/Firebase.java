@@ -48,4 +48,24 @@ public class Firebase {
         }
         return budgetsRef;
     }
+
+     /**
+     * Thread-safe goals reference getter
+     * Path: users/{uid}/goals
+     */
+    public static DatabaseReference getGoalsRef() {
+        if (goalsRef == null) {
+            synchronized (Firebase.class) {
+                if (goalsRef == null) {
+                    String uid = getCurrentUserId();
+                    if (uid != null) {
+                        goalsRef = getDatabase().getReference("users")
+                                .child(uid)
+                                .child("goals");
+                    }
+                }
+            }
+        }
+        return goalsRef;
+    }
 }
