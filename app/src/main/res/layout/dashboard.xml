@@ -106,13 +106,15 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/top_bar" />
 
-        <!-- Main Content ScrollView -->
-        <ScrollView
+        <!-- Main Content Scroll -->
+        <androidx.core.widget.NestedScrollView
             android:id="@+id/dashboard_scroll"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_marginTop="16dp"
             android:fillViewport="true"
+            android:clipToPadding="false"
+            android:nestedScrollingEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/dashboard_title"
             app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
             app:layout_constraintStart_toStartOf="parent"
@@ -122,7 +124,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:paddingBottom="88dp">
 
                 <!-- Total Spent Card -->
                 <com.google.android.material.card.MaterialCardView
@@ -174,6 +177,7 @@
                     android:layout_height="56dp"
                     android:layout_marginBottom="16dp"
                     android:text="View Remaining Budgets"
+                    android:contentDescription="View remaining budgets button"
                     android:textSize="16sp"
                     android:textAllCaps="false"
                     app:cornerRadius="16dp"
@@ -181,12 +185,14 @@
                     android:textColor="@android:color/white"
                     app:icon="@drawable/ic_budget"
                     app:iconTint="@android:color/white"
-                    app:iconGravity="textStart"/>
+                    app:iconGravity="textStart"
+                    android:contentDescription="View remaining budgets button"/>
 
                 <!-- Remaining Budgets List (Initially Hidden) -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/remaining_budgets_recycler"
                     android:layout_width="match_parent"
+                    android:contentDescription="Remaining budgets list"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     android:visibility="gone"
@@ -199,6 +205,11 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="12dp"
                     android:text="Spending by Category"
+                    android:contentDescription="Spending by category heading"
+                    android:labelFor="@+id/spending_pie_chart"
+                    android:accessibilityHeading="true"
+                    android:contentDescription="Spending by category heading"
+                    android:labelFor="@+id/spending_pie_chart"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -207,7 +218,13 @@
                     android:id="@+id/spending_pie_chart"
                     android:layout_width="match_parent"
                     android:layout_height="260dp"
+                    android:contentDescription="Spending by category chart"
+                    android:focusable="true"
+                    android:importantForAccessibility="yes"
                     android:layout_marginBottom="24dp"
+                    android:contentDescription="Spending by category chart"
+                    android:focusable="true"
+                    android:importantForAccessibility="yes"
                     android:background="@android:color/white"
                     android:padding="12dp"/>
 
@@ -217,6 +234,11 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
                     android:text="Budget Usage"
+                    android:contentDescription="Budget usage heading"
+                    android:labelFor="@+id/budget_usage_bar_chart"
+                    android:accessibilityHeading="true"
+                    android:contentDescription="Budget usage heading"
+                    android:labelFor="@+id/budget_usage_bar_chart"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -225,7 +247,13 @@
                     android:id="@+id/budget_usage_bar_chart"
                     android:layout_width="match_parent"
                     android:layout_height="280dp"
+                    android:contentDescription="Budget usage chart"
+                    android:focusable="true"
+                    android:importantForAccessibility="yes"
                     android:layout_marginBottom="24dp"
+                    android:contentDescription="Budget usage chart"
+                    android:focusable="true"
+                    android:importantForAccessibility="yes"
                     android:background="@android:color/white"
                     android:padding="12dp"/>
 
@@ -236,6 +264,9 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="12dp"
                     android:text="Budget Overview"
+                    android:contentDescription="Budget overview heading"
+                    android:accessibilityHeading="true"
+                    android:contentDescription="Budget overview heading"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -442,7 +473,7 @@
                 </LinearLayout>
 
             </LinearLayout>
-        </ScrollView>
+        </androidx.core.widget.NestedScrollView>
 
         <!-- Bottom Navigation Bar -->
         <LinearLayout
@@ -586,6 +617,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Budget Usage"
+                    android:contentDescription="Budget usage heading"
+                    android:labelFor="@+id/budget_usage_bar_chart"
+                    android:accessibilityHeading="true"
             android:textSize="18sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
