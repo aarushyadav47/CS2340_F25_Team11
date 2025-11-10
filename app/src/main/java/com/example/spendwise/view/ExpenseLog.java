@@ -235,23 +235,12 @@ public class ExpenseLog extends AppCompatActivity {
         ExpenseAdapter adapter = new ExpenseAdapter();
         recyclerView.setAdapter(adapter);
 
-        // Observe expenses from Firebase
+        // Observe expenses
         expenseViewModel.getExpenses().observe(this, expenses -> {
             // Sort expenses from newest to oldest
             List<Expense> sortedExpenses = new ArrayList<>(expenses);
-            Collections.sort(sortedExpenses, new Comparator<Expense>() {
-                @Override
-                public int compare(Expense e1, Expense e2) {
-                    try {
-                        Date date1 = dateFormat.parse(e1.getDate());
-                        Date date2 = dateFormat.parse(e2.getDate());
-                        // Sort in descending order (newest first)
-                        return date2.compareTo(date1);
-                    } catch (ParseException e) {
-                        return 0;
-                    }
-                }
-            });
+            ExpenseSortStrategy sortStrategy = new SortByDateStrategy(dateFormat);
+            sortStrategy.sort(sortedExpenses);
 
             adapter.setExpenses(sortedExpenses);
 
