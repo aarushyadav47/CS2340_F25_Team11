@@ -127,4 +127,30 @@ public class BudgetViewModel extends ViewModel {
                     statusMessage.setValue("Error deleting budget: " + e.getMessage());
                 });
     }
+
+    /** Dummy method to simulate updating a budget locally */
+    public void updateBudget(String id, double newAmount) {
+        List<Budget> current = budgets.getValue();
+        if (current == null) return;
+        for (Budget b : current) {
+            if (b.getId() != null && b.getId().equals(id)) {
+                b.setAmount(newAmount);
+                statusMessage.setValue("Budget " + b.getName() + " updated locally.");
+                budgets.setValue(current);
+                return;
+            }
+        }
+        statusMessage.setValue("Budget not found for update.");
+    }
+
+    /** Dummy method to find a budget by ID */
+    public Budget getBudgetById(String id) {
+        if (budgets.getValue() == null) return null;
+        for (Budget b : budgets.getValue()) {
+            if (b.getId() != null && b.getId().equals(id)) {
+                return b;
+            }
+        }
+        return null;
+    }
 }
