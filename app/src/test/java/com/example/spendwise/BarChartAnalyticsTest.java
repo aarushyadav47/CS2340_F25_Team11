@@ -13,6 +13,8 @@ import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarEntry;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +23,7 @@ import java.util.List;
  * Tests for Budget vs Spent Bar Chart Analytics
  * Sprint 3 requirement: Charts dynamically update and show budget utilization
  */
+@RunWith(RobolectricTestRunner.class)
 public class BarChartAnalyticsTest {
 
     /**
