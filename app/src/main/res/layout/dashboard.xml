@@ -106,7 +106,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/top_bar" />
 
-        <!-- Main Content Scroll -->
+        <!-- Main Content ScrollView -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/dashboard_scroll"
             android:layout_width="0dp"
@@ -114,7 +114,6 @@
             android:layout_marginTop="16dp"
             android:fillViewport="true"
             android:clipToPadding="false"
-            android:nestedScrollingEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/dashboard_title"
             app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
             app:layout_constraintStart_toStartOf="parent"
