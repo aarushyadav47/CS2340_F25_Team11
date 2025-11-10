@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Spendwise</string>
+    <string name="invitation_accept">Accept</string>
+    <string name="invitation_decline">Decline</string>
+    <string name="invitation_status_accepted">Accepted</string>
+    <string name="invitation_status_declined">Declined</string>
+</resources>

@@ -7,9 +7,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.example.spendwise.factory.ChartFactory;
-import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.charts.PieChart;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,40 +15,48 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.spendwise.R;
+import com.example.spendwise.adapter.BudgetAdapter;
 import com.example.spendwise.databinding.DashboardBinding;
 import com.example.spendwise.model.Budget;
 import com.example.spendwise.model.Expense;
 import com.example.spendwise.viewModel.BudgetViewModel;
+import com.example.spendwise.viewModel.DashboardAnalyticsViewModel;
 import com.example.spendwise.viewModel.ExpenseViewModel;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
-import com.example.spendwise.adapter.BudgetAdapter;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.PieData;
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.ArrayList;
 
 public class Dashboard extends AppCompatActivity {
 
     private DashboardBinding binding;
     private ExpenseViewModel expenseViewModel;
     private BudgetViewModel budgetViewModel;
+    private DashboardAnalyticsViewModel dashboardAnalyticsViewModel;
     private FirebaseAuth auth;
     private BudgetAdapter remainingBudgetsAdapter;
     private PieChart pieChart;
-    private BarChart barChart;
+    private BarChart budgetBarChart;
+    private final List<String> budgetLabels = new ArrayList<>();
 
     private Calendar currentSimulatedDate;
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy",
-            Locale.US);
-    private SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM/dd/yyyy",
-            Locale.US);
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
+    private final SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     private SharedPreferences preferences;
 
     private static final String PREFS_NAME = "SpendWisePrefs";
@@ -67,26 +72,118 @@ public class Dashboard extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
-        // Initialize ViewModels
         expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class);
         budgetViewModel = new ViewModelProvider(this).get(BudgetViewModel.class);
+        dashboardAnalyticsViewModel = new ViewModelProvider(this).get(DashboardAnalyticsViewModel.class);
         binding.setLifecycleOwner(this);
 
-        // Load or initialize simulated date
+        pieChart = findViewById(R.id.spending_pie_chart);
+        budgetBarChart = findViewById(R.id.budget_usage_bar_chart);
+
+        setupPieChart();
+        setupBudgetBarChart();
+        observeAnalyticsData();
+
         loadSimulatedDate();
         updateDateDisplay();
 
-        // Setup UI components
         setupCalendarSelector();
         setupLogoutButton();
         setupNavigation();
         setupQuickActions();
         setupBudgetCards();
         setupRemainingBudgetsButton();
-        setupCharts();
 
-        // Load dashboard data
         loadDashboardData();
+    }
+
+    private void setupPieChart() {
+        pieChart.setUsePercentValues(true);
+        pieChart.getDescription().setEnabled(false);
+        pieChart.setDrawHoleEnabled(true);
+        pieChart.setHoleRadius(40f);
+        pieChart.setTransparentCircleRadius(45f);
+        pieChart.setEntryLabelColor(android.graphics.Color.BLACK);
+        pieChart.setEntryLabelTextSize(11f);
+        Legend legend = pieChart.getLegend();
+        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
+        legend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        legend.setDrawInside(false);
+    }
+
+    private void setupBudgetBarChart() {
+        budgetBarChart.setDrawGridBackground(false);
+        budgetBarChart.setDrawBarShadow(false);
+        budgetBarChart.setHighlightFullBarEnabled(false);
+        budgetBarChart.getDescription().setEnabled(false);
+
+        XAxis xAxis = budgetBarChart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setGranularity(1f);
+        xAxis.setCenterAxisLabels(true);
+        xAxis.setDrawGridLines(false);
+
+        budgetBarChart.getAxisLeft().setAxisMinimum(0f);
+        budgetBarChart.getAxisRight().setAxisMinimum(0f);
+        budgetBarChart.getAxisRight().setDrawLabels(false);
+
+        Legend legend = budgetBarChart.getLegend();
+        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
+        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.RIGHT);
+        legend.setOrientation(Legend.LegendOrientation.VERTICAL);
+        legend.setDrawInside(false);
+    }
+
+    private void observeAnalyticsData() {
+        dashboardAnalyticsViewModel.getSpendingByCategoryData().observe(this, pieData -> {
+            if (pieData == null) {
+                return;
+            }
+            pieData.setValueFormatter(new com.github.mikephil.charting.formatter.PercentFormatter(pieChart));
+            pieChart.setData(pieData);
+            pieChart.highlightValues(null);
+            pieChart.invalidate();
+        });
+
+        dashboardAnalyticsViewModel.getBudgetUsageLabels().observe(this, labels -> {
+            budgetLabels.clear();
+            if (labels != null) {
+                budgetLabels.addAll(labels);
+            }
+            XAxis xAxis = budgetBarChart.getXAxis();
+            xAxis.setValueFormatter(new IndexAxisValueFormatter(budgetLabels));
+            xAxis.setLabelCount(Math.max(budgetLabels.size(), 1));
+        });
+
+        dashboardAnalyticsViewModel.getBudgetUsageData().observe(this, barData -> {
+            if (barData == null) {
+                return;
+            }
+
+            float groupSpace = 0.2f;
+            float barSpace = 0.05f;
+            float barWidth = 0.35f;
+
+            barData.setBarWidth(barWidth);
+            budgetBarChart.setData(barData);
+
+            int groupCount = budgetLabels.size();
+            if (groupCount == 0 && barData.getDataSetCount() > 0) {
+                groupCount = barData.getDataSetByIndex(0).getEntryCount();
+            }
+            if (groupCount == 0) {
+                groupCount = 1;
+            }
+            budgetBarChart.getXAxis().setAxisMinimum(0f);
+            budgetBarChart.getXAxis().setAxisMaximum(0f + budgetBarChart.getBarData().getGroupWidth(groupSpace, barSpace) * groupCount);
+
+            if (barData.getDataSetCount() > 1) {
+                budgetBarChart.groupBars(0f, groupSpace, barSpace);
+            }
+
+            budgetBarChart.invalidate();
+        });
     }
 
     private void loadSimulatedDate() {
@@ -118,7 +215,6 @@ public class Dashboard extends AppCompatActivity {
         TextView dateText = findViewById(R.id.selected_date_text);
         dateText.setText(dateFormat.format(currentSimulatedDate.getTime()));
 
-        // Update period info
         TextView periodInfo = findViewById(R.id.period_info);
         Calendar start = (Calendar) currentSimulatedDate.clone();
         start.set(Calendar.DAY_OF_MONTH, 1);
@@ -144,7 +240,7 @@ public class Dashboard extends AppCompatActivity {
                     currentSimulatedDate.set(year, month, dayOfMonth);
                     saveSimulatedDate();
                     updateDateDisplay();
-                    loadDashboardData(); // Refresh data with new date
+                    loadDashboardData();
                     Toast.makeText(this,
                             "Date updated! All time-based features will use this date.",
                             Toast.LENGTH_LONG).show();
@@ -173,15 +269,12 @@ public class Dashboard extends AppCompatActivity {
     }
 
     private void performLogout() {
-        // Clear simulated date
         SharedPreferences.Editor editor = preferences.edit();
         editor.clear();
         editor.apply();
 
-        // Sign out from Firebase
         auth.signOut();
 
-        // Clear activity stack and go to login
         Intent intent = new Intent(this, Login.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
@@ -248,11 +341,9 @@ public class Dashboard extends AppCompatActivity {
         MaterialCardView weeklyCard = findViewById(R.id.weekly_budget_card);
         MaterialCardView monthlyCard = findViewById(R.id.monthly_budget_card);
 
-        // Disable clicks
         weeklyCard.setClickable(false);
         monthlyCard.setClickable(false);
 
-        // Optionally make the visual feedback consistent
         weeklyCard.setFocusable(false);
         monthlyCard.setFocusable(false);
     }
@@ -313,7 +404,6 @@ public class Dashboard extends AppCompatActivity {
                         String freq = budget.getfreq();
                         boolean isActive = false;
 
-                        // Weekly/Monthly budgets are always active; others check period
                         if ("Weekly".equalsIgnoreCase(freq)
                                 || "Monthly".equalsIgnoreCase(freq)) {
                             isActive = true;
@@ -333,7 +423,6 @@ public class Dashboard extends AppCompatActivity {
                             continue;
                         }
 
-                        // Calculate total spent in the current period for this budget
                         double totalSpent = 0.0;
                         for (Expense expense : expenses) {
                             if (expense.getCategory().getDisplayName()
@@ -358,11 +447,10 @@ public class Dashboard extends AppCompatActivity {
                             }
                         }
 
-                        // Create remaining budget object
                         Budget remainingBudget = new Budget(
                                 budget.getName(),
-                                budget.getAmount() - totalSpent, // remaining
-                                budget.getAmount(), // original amount
+                                budget.getAmount() - totalSpent,
+                                budget.getAmount(),
                                 budget.getCategory(),
                                 budget.getDate(),
                                 budget.getfreq()
@@ -392,7 +480,6 @@ public class Dashboard extends AppCompatActivity {
         View remainingBudgetsButton = findViewById(R.id.remaining_budgets_button);
         RecyclerView recyclerView = findViewById(R.id.remaining_budgets_recycler);
 
-        // Setup the RecyclerView
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         remainingBudgetsAdapter = new BudgetAdapter();
         recyclerView.setAdapter(remainingBudgetsAdapter);
@@ -408,7 +495,6 @@ public class Dashboard extends AppCompatActivity {
     }
 
     private void loadDashboardData() {
-        // Calculate date ranges
         Calendar weekStart = (Calendar) currentSimulatedDate.clone();
         weekStart.set(Calendar.DAY_OF_WEEK, weekStart.getFirstDayOfWeek());
 
@@ -422,7 +508,8 @@ public class Dashboard extends AppCompatActivity {
         monthEnd.set(Calendar.DAY_OF_MONTH,
                 monthEnd.getActualMaximum(Calendar.DAY_OF_MONTH));
 
-        // Load expenses and calculate totals
+        dashboardAnalyticsViewModel.updateWindow(monthStart.getTime(), monthEnd.getTime());
+
         expenseViewModel.getExpenses().observe(this, expenses -> {
             if (expenses != null) {
                 calculateAndDisplayTotals(expenses, weekStart, weekEnd,
@@ -430,7 +517,6 @@ public class Dashboard extends AppCompatActivity {
             }
         });
 
-        // Load budgets and display remaining amounts
         budgetViewModel.getBudgets().observe(this, budgets -> {
             if (budgets != null) {
                 displayBudgetSummary(budgets);
@@ -448,7 +534,6 @@ public class Dashboard extends AppCompatActivity {
             try {
                 Date expenseDate = shortDateFormat.parse(expense.getDate());
                 if (expenseDate != null) {
-                    // Total spent in current month (for the main spending card)
                     if (isDateInRange(expenseDate, monthStart.getTime(),
                             monthEnd.getTime())) {
                         totalSpent += expense.getAmount();
@@ -459,11 +544,9 @@ public class Dashboard extends AppCompatActivity {
             }
         }
 
-        // Update total spent UI (main card at top)
         TextView totalSpentText = findViewById(R.id.total_spent_amount);
         totalSpentText.setText(String.format(Locale.US, "$%.2f", totalSpent));
 
-        // Calculate weekly and monthly budgets (now with category filtering)
         updateBudgetDisplay();
     }
 
@@ -471,11 +554,9 @@ public class Dashboard extends AppCompatActivity {
         budgetViewModel.getBudgets().observe(this, budgets -> {
             expenseViewModel.getExpenses().observe(this, expenses -> {
 
-                // Track which categories have active budgets
                 Map<String, Double> weeklyBudgets = new HashMap<>();
                 Map<String, Double> monthlyBudgets = new HashMap<>();
 
-                // Collect all active budgets per frequency
                 for (Budget budget : budgets) {
                     try {
                         Date budgetDate = shortDateFormat.parse(budget.getDate());
@@ -502,7 +583,6 @@ public class Dashboard extends AppCompatActivity {
                     }
                 }
 
-                // Calculate spent amounts only for categories with budgets
                 double totalWeeklySpent = 0.0;
                 double totalMonthlySpent = 0.0;
 
@@ -515,13 +595,11 @@ public class Dashboard extends AppCompatActivity {
 
                         String categoryName = expense.getCategory().getDisplayName();
 
-                        // Only count weekly expenses if category has a weekly budget
                         if (isInCurrentWeek(expenseDate)
                                 && weeklyBudgets.containsKey(categoryName)) {
                             totalWeeklySpent += expense.getAmount();
                         }
 
-                        // Only count monthly expenses if category has a monthly budget
                         if (isInCurrentMonth(expenseDate)
                                 && monthlyBudgets.containsKey(categoryName)) {
                             totalMonthlySpent += expense.getAmount();
@@ -531,7 +609,6 @@ public class Dashboard extends AppCompatActivity {
                     }
                 }
 
-                // Calculate total budgets
                 double totalWeeklyBudget = 0.0;
                 double totalMonthlyBudget = 0.0;
 
@@ -542,11 +619,9 @@ public class Dashboard extends AppCompatActivity {
                     totalMonthlyBudget += amount;
                 }
 
-                // Calculate remaining amounts
                 double weeklyRemaining = totalWeeklyBudget - totalWeeklySpent;
                 double monthlyRemaining = totalMonthlyBudget - totalMonthlySpent;
 
-                // Update weekly budget card
                 TextView weeklyBudgetText = findViewById(R.id.weekly_budget_amount);
                 weeklyBudgetText.setText(String.format(Locale.US, "$%.2f",
                         Math.max(0, weeklyRemaining)));
@@ -558,7 +633,6 @@ public class Dashboard extends AppCompatActivity {
                             .getColor(android.R.color.black));
                 }
 
-                // Update monthly budget card
                 TextView monthlyBudgetText = findViewById(R.id.monthly_budget_amount);
                 monthlyBudgetText.setText(String.format(Locale.US, "$%.2f",
                         Math.max(0, monthlyRemaining)));
@@ -574,7 +648,6 @@ public class Dashboard extends AppCompatActivity {
     }
 
     private void displayBudgetSummary(List<Budget> budgets) {
-        // Filter budgets based on current simulated date period
         Map<String, Double> categoryBudgets = new HashMap<>();
         Map<String, Double> categorySpent = new HashMap<>();
 
@@ -607,7 +680,6 @@ public class Dashboard extends AppCompatActivity {
             }
         }
 
-        // Calculate spent per category
         expenseViewModel.getExpenses().observe(this, expenses -> {
             if (expenses != null) {
                 for (Expense expense : expenses) {
@@ -661,36 +733,9 @@ public class Dashboard extends AppCompatActivity {
                 == currentSimulatedDate.get(Calendar.DAY_OF_MONTH);
     }
 
-    private void setupCharts() {
-        pieChart = findViewById(R.id.pieChart);
-        barChart = findViewById(R.id.barChart);
-
-        // Setup chart observers for real-time updates
-        expenseViewModel.getExpenses().observe(this, expenses -> {
-            if (expenses != null && !expenses.isEmpty()) {
-                pieChart.setData(ChartFactory.createCategoryPieChart(expenses));
-                pieChart.getDescription().setEnabled(false);
-                pieChart.invalidate();
-            }
-        });
-
-        budgetViewModel.getBudgets().observe(this, budgets -> {
-            if (budgets != null && !budgets.isEmpty() &&
-                    expenseViewModel.getExpenses().getValue() != null) {
-                barChart.setData(ChartFactory.createBudgetBarChart(
-                        budgets,
-                        expenseViewModel.getExpenses().getValue()
-                ));
-                barChart.getDescription().setEnabled(false);
-                barChart.invalidate();
-            }
-        });
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
-        // Reload data when returning to dashboard
         loadDashboardData();
     }
 }
