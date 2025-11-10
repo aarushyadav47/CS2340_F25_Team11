@@ -1,14 +1,9 @@
 // Sprint 3 Test - Saving Circle Functionality
 package com.example.spendwise;
-
 import static org.junit.Assert.*;
-
 import com.example.spendwise.model.SavingCircle;
-
 import org.junit.Test;
-
 public class SavingCircleTest {
-
     /**
      * Test 3: Verify Saving Circle creation with all required fields
      * Sprint 3 requirement: User can create group with all required fields
@@ -22,10 +17,8 @@ public class SavingCircleTest {
         String frequency = "Monthly";
         String notes = "Spring break fund";
         long timestamp = System.currentTimeMillis();
-
         SavingCircle circle = new SavingCircle(groupName, creatorEmail, challengeTitle,
                 goalAmount, frequency, notes, timestamp);
-
         assertEquals("Group name should match", groupName, circle.getGroupName());
         assertEquals("Creator email should match", creatorEmail, circle.getCreatorEmail());
         assertEquals("Challenge title should match", challengeTitle, circle.getChallengeTitle());
@@ -34,7 +27,6 @@ public class SavingCircleTest {
         assertEquals("Notes should match", notes, circle.getNotes());
         assertNotNull("Circle should have an ID", circle.getId());
     }
-
     /**
      * Test 4: Verify frequency validation for Saving Circles
      * Sprint 3 requirement: Valid frequency (weekly/monthly) required
@@ -43,16 +35,40 @@ public class SavingCircleTest {
     public void testSavingCircleFrequencyValidation() {
         String validWeekly = "Weekly";
         String validMonthly = "Monthly";
-
         // Test valid frequencies
         assertTrue("Weekly should be valid frequency",
                 validWeekly.equals("Weekly") || validWeekly.equals("Monthly"));
         assertTrue("Monthly should be valid frequency",
                 validMonthly.equals("Weekly") || validMonthly.equals("Monthly"));
-
         // Test invalid frequency
         String invalidFrequency = "Daily";
         assertFalse("Daily should be invalid frequency",
                 invalidFrequency.equals("Weekly") || invalidFrequency.equals("Monthly"));
+    }
+    
+    /**
+     * Test 5: Verify Saving Circle with minimum valid goal amount
+     * Sprint 3 requirement: Goal amount must be positive
+     */
+    @Test
+    public void testSavingCircleMinimumGoalAmount() {
+        double minGoal = 0.01;
+        SavingCircle circle = new SavingCircle("Min Goal Group", "user@test.com",
+                "Minimum Challenge", minGoal, "Weekly", "Testing min goal", 
+                System.currentTimeMillis());
+        assertTrue("Minimum goal should be positive", circle.getGoalAmount() > 0);
+        assertEquals("Goal should match minimum value", minGoal, circle.getGoalAmount(), 0.001);
+    }
+    
+    /**
+     * Test 6: Verify Saving Circle with empty notes field
+     * Sprint 3 requirement: Notes field is optional
+     */
+    @Test
+    public void testSavingCircleEmptyNotes() {
+        SavingCircle circle = new SavingCircle("No Notes Group", "test@test.com",
+                "Challenge Without Notes", 300.0, "Monthly", "", System.currentTimeMillis());
+        assertNotNull("Notes should not be null", circle.getNotes());
+        assertEquals("Empty notes should be allowed", "", circle.getNotes());
     }
 }
