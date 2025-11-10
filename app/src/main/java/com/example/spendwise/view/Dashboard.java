@@ -77,11 +77,15 @@ public class Dashboard extends AppCompatActivity {
         dashboardAnalyticsViewModel = new ViewModelProvider(this).get(DashboardAnalyticsViewModel.class);
         binding.setLifecycleOwner(this);
 
-        pieChart = findViewById(R.id.spending_pie_chart);
-        budgetBarChart = findViewById(R.id.budget_usage_bar_chart);
+        // Create charts using the factory
+        pieChart = ChartFactory.createPieChart(this, expenses);
+        budgetBarChart = ChartFactory.createBarChart(this, budgets, expenses);
 
-        setupPieChart();
-        setupBudgetBarChart();
+        // Now you can add them to your layout if you want
+        LinearLayout chartContainer = findViewById(R.id.chart_container); // your parent layout in XML
+        chartContainer.addView(pieChart);
+        chartContainer.addView(budgetBarChart);
+
         observeAnalyticsData();
 
         loadSimulatedDate();
