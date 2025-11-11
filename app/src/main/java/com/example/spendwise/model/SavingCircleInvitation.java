@@ -7,6 +7,7 @@ public class SavingCircleInvitation {
     private String challengeTitle;
     private String inviterEmail;
     private String inviteeEmail;
+    private String creatorUid; // UID of the circle creator
     private String status; // "pending", "accepted", "declined"
     private long sentAt;
     private long respondedAt;
@@ -31,6 +32,13 @@ public class SavingCircleInvitation {
         this.respondedAt = 0;
         this.goalAmount = goalAmount;
         this.frequency = frequency;
+    }
+
+    public SavingCircleInvitation(String circleId, String circleName, String challengeTitle,
+                                  String inviterEmail, String inviteeEmail,
+                                  double goalAmount, String frequency, String creatorUid) {
+        this(circleId, circleName, challengeTitle, inviterEmail, inviteeEmail, goalAmount, frequency);
+        this.creatorUid = creatorUid;
     }
 
     // Getters and Setters
@@ -120,6 +128,14 @@ public class SavingCircleInvitation {
 
     public void setFrequency(String frequency) {
         this.frequency = frequency;
+    }
+
+    public String getCreatorUid() {
+        return creatorUid;
+    }
+
+    public void setCreatorUid(String creatorUid) {
+        this.creatorUid = creatorUid;
     }
 
     public boolean isPending() {

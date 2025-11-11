@@ -6,6 +6,7 @@ public class SavingCircle {
     private String id;
     private String groupName;
     private String creatorEmail;
+    private String creatorUid; // UID of the creator (for reading from correct path)
     private String challengeTitle;
     private double goalAmount;
     private String frequency; // "Weekly" or "Monthly"
@@ -93,5 +94,13 @@ public class SavingCircle {
 
     public void setCreatedAt(long createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getCreatorUid() {
+        return creatorUid;
+    }
+
+    public void setCreatorUid(String creatorUid) {
+        this.creatorUid = creatorUid;
     }
 }
