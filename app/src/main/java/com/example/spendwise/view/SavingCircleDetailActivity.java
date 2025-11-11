@@ -106,6 +106,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                 TextView nameText = memberView.findViewById(R.id.member_name);
                 TextView currentAmountText = memberView.findViewById(R.id.member_current_amount);
                 TextView joinDateText = memberView.findViewById(R.id.member_join_date);
+                TextView cycleDatesText = memberView.findViewById(R.id.member_cycle_dates);
                 TextView historyText = memberView.findViewById(R.id.member_historical_contributions);
                 ProgressBar memberProgress = memberView.findViewById(R.id.member_progress_bar);
 
@@ -115,6 +116,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                 );
 
                 currentAmountText.setText("Loading...");
+                cycleDatesText.setText("Loading cycle dates...");
                 historyText.setText("Loading...");
                 memberProgress.setProgress(0);
 
@@ -122,6 +124,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
 
                 if (member.getJoinedAt() > selectedDateTimestamp) {
                     currentAmountText.setText("Not joined yet");
+                    cycleDatesText.setText("Not joined yet");
                     historyText.setText("--");
                     memberProgress.setProgress(0);
 
@@ -136,7 +139,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
 
                 // Get or create the cycle for the selected date
                 getOrCreateCycleForDate(circleId, member.getEmail(), member.getJoinedAt(),
-                        allocation, currentAmountText, memberProgress, historyText);
+                        allocation, currentAmountText, cycleDatesText, memberProgress, historyText);
             }
         });
     }
@@ -146,14 +149,15 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
      */
     private void getOrCreateCycleForDate(String circleId, String memberEmail, long joinDate,
                                          double allocation, TextView currentAmountText,
-                                         ProgressBar memberProgress, TextView historyText) {
+                                         TextView cycleDatesText, ProgressBar memberProgress, 
+                                         TextView historyText) {
         savingCircleViewModel.getCycleAtDate(circleId, memberEmail, selectedDateTimestamp,
                 new SavingCircleViewModel.OnCycleLoadedListener() {
 
                     @Override
                     public void onCycleLoaded(MemberCycle cycle) {
                         // Cycle exists, display it
-                        displayCycleData(cycle, allocation, currentAmountText, memberProgress);
+                        displayCycleData(cycle, allocation, currentAmountText, cycleDatesText, memberProgress);
                         loadMemberHistoricalContributions(memberEmail, historyText);
                     }
 
@@ -161,13 +165,14 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                     public void onCycleNotFound() {
                         // No cycle found - need to create missing cycles
                         createMissingCycles(circleId, memberEmail, joinDate, allocation,
-                                currentAmountText, memberProgress, historyText);
+                                currentAmountText, cycleDatesText, memberProgress, historyText);
                     }
 
                     @Override
                     public void onError(String message) {
                         Log.e(TAG, "Error: " + message);
                         currentAmountText.setText("Error");
+                        cycleDatesText.setText("Error");
                         historyText.setText("Error");
 
                         synchronized (SavingCircleDetailActivity.this) {
@@ -183,17 +188,43 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
      */
     private void createMissingCycles(String circleId, String memberEmail, long joinDate,
                                      double allocation, TextView currentAmountText,
-                                     ProgressBar memberProgress, TextView historyText) {
+                                     TextView cycleDatesText, ProgressBar memberProgress, 
+                                     TextView historyText) {
         savingCircleViewModel.getMemberCycleHistory(circleId, memberEmail).observe(this, cycles -> {
             if (cycles == null || cycles.isEmpty()) {
-                // No cycles at all
-                currentAmountText.setText("No cycles available");
-                historyText.setText("--");
-
-                synchronized (SavingCircleDetailActivity.this) {
-                    membersProcessed++;
+                // No cycles at all - create the first cycle
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTimeInMillis(joinDate);
+                
+                if ("Weekly".equals(frequency)) {
+                    calendar.add(Calendar.WEEK_OF_YEAR, 1);
+                } else {
+                    calendar.add(Calendar.MONTH, 1);
                 }
-                checkIfAllMembersProcessed();
+                long endDate = calendar.getTimeInMillis();
+                
+                MemberCycle firstCycle = new MemberCycle(joinDate, endDate, allocation);
+                savingCircleViewModel.createCycle(circleId, memberEmail, firstCycle,
+                    new SavingCircleViewModel.OnCycleCreatedListener() {
+                        @Override
+                        public void onCycleCreated(MemberCycle cycle) {
+                            displayCycleData(cycle, allocation, currentAmountText, cycleDatesText, memberProgress);
+                            loadMemberHistoricalContributions(memberEmail, historyText);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            Log.e(TAG, "Error creating first cycle: " + message);
+                            currentAmountText.setText("Error creating cycle");
+                            cycleDatesText.setText("Error creating cycle");
+                            historyText.setText("Error");
+                            
+                            synchronized (SavingCircleDetailActivity.this) {
+                                membersProcessed++;
+                            }
+                            checkIfAllMembersProcessed();
+                        }
+                    });
                 return;
             }
 
@@ -208,6 +239,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
             if (lastCycle == null || selectedDateTimestamp < lastCycle.getStartDate()) {
                 // Selected date is before any cycles
                 currentAmountText.setText("No cycle for this date");
+                cycleDatesText.setText("No cycle for this date");
                 historyText.setText("--");
 
                 synchronized (SavingCircleDetailActivity.this) {
@@ -219,14 +251,14 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
 
             // If selected date is within existing cycles, we already checked - shouldn't be here
             if (selectedDateTimestamp < lastCycle.getEndDate()) {
-                displayCycleData(lastCycle, allocation, currentAmountText, memberProgress);
+                displayCycleData(lastCycle, allocation, currentAmountText, cycleDatesText, memberProgress);
                 loadMemberHistoricalContributions(memberEmail, historyText);
                 return;
             }
 
             // Create cycles from lastCycle to selectedDate
             createCyclesUpToDate(circleId, memberEmail, lastCycle, allocation,
-                    currentAmountText, memberProgress, historyText);
+                    currentAmountText, cycleDatesText, memberProgress, historyText);
         });
     }
 
@@ -237,7 +269,8 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
      */
     private void createCyclesUpToDate(String circleId, String memberEmail, MemberCycle lastCycle,
                                       double allocation, TextView currentAmountText,
-                                      ProgressBar memberProgress, TextView historyText) {
+                                      TextView cycleDatesText, ProgressBar memberProgress, 
+                                      TextView historyText) {
 
         // First, complete the last cycle if it should be complete
         if (!lastCycle.isComplete() && lastCycle.getEndDate() <= selectedDateTimestamp) {
@@ -284,10 +317,10 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                             if (selectedDateTimestamp >= cycle.getEndDate()) {
                                 // Need to create more cycles
                                 createCyclesUpToDate(circleId, memberEmail, cycle, allocation,
-                                        currentAmountText, memberProgress, historyText);
+                                        currentAmountText, cycleDatesText, memberProgress, historyText);
                             } else {
                                 // This cycle covers the selected date - display it
-                                displayCycleData(cycle, allocation, currentAmountText, memberProgress);
+                                displayCycleData(cycle, allocation, currentAmountText, cycleDatesText, memberProgress);
                                 loadMemberHistoricalContributions(memberEmail, historyText);
                             }
                         }
@@ -296,6 +329,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                         public void onError(String message) {
                             Log.e(TAG, "Error creating cycle: " + message);
                             currentAmountText.setText("Error creating cycle");
+                            cycleDatesText.setText("Error");
 
                             synchronized (SavingCircleDetailActivity.this) {
                                 membersProcessed++;
@@ -305,7 +339,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                     });
         } else {
             // Last cycle covers the selected date
-            displayCycleData(lastCycle, allocation, currentAmountText, memberProgress);
+            displayCycleData(lastCycle, allocation, currentAmountText, cycleDatesText, memberProgress);
             loadMemberHistoricalContributions(memberEmail, historyText);
         }
     }
@@ -349,7 +383,8 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
      * Display cycle data in the UI
      */
     private void displayCycleData(MemberCycle cycle, double allocation,
-                                  TextView currentAmountText, ProgressBar memberProgress) {
+                                  TextView currentAmountText, TextView cycleDatesText,
+                                  ProgressBar memberProgress) {
         double leftover = cycle.getEndAmount();
 
         currentAmountText.setText(
@@ -357,6 +392,13 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                         CURRENCY_FORMAT.format(leftover),
                         CURRENCY_FORMAT.format(allocation))
         );
+
+        // Display cycle start/end dates
+        String cycleDates = String.format(Locale.US, "Cycle: %s - %s",
+                DATE_FORMAT.format(cycle.getStartDate()),
+                DATE_FORMAT.format(cycle.getEndDate()));
+        cycleDatesText.setText(cycleDates);
+        Log.d(TAG, "Setting cycle dates for " + cycleDates);
 
         int progress = allocation > 0 ? (int) ((leftover / allocation) * 100) : 0;
         memberProgress.setProgress(Math.min(progress, 100));
@@ -386,17 +428,17 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
 
                 if (completedCount > 0) {
                     historyText.setText(
-                            String.format(Locale.US, "Contributed: $%s (%d cycles)",
+                            String.format(Locale.US, "Contribution to Shared Goal: $%s (%d cycles)",
                                     CURRENCY_FORMAT.format(historicalContribution),
                                     completedCount)
                     );
                 } else {
-                    historyText.setText("No completed cycles yet");
+                    historyText.setText("Contribution to Shared Goal: $0.00");
                 }
 
                 checkIfAllMembersProcessed();
             } else {
-                historyText.setText("No history");
+                historyText.setText("Contribution to Shared Goal: $0.00");
 
                 synchronized (this) {
                     membersProcessed++;

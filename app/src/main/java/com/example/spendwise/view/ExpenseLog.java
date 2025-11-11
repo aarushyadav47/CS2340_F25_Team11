@@ -12,6 +12,7 @@ import com.example.spendwise.R;
 import com.example.spendwise.databinding.ExpenselogBinding;
 import com.example.spendwise.model.Category;
 import com.example.spendwise.model.Expense;
+import com.example.spendwise.model.SavingCircle;
 
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
@@ -25,23 +26,32 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import com.example.spendwise.adapter.ExpenseAdapter;
 
 import com.example.spendwise.viewModel.ExpenseViewModel;
+import com.example.spendwise.viewModel.SavingCircleViewModel;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import android.widget.AutoCompleteTextView;
 import android.widget.Toast;
+import android.util.Log;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ExpenseLog extends AppCompatActivity {
 
     private ExpenseViewModel expenseViewModel;
+    private SavingCircleViewModel savingCircleViewModel;
     private ExpenselogBinding binding;
     private Calendar calendar = Calendar.getInstance();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+    private List<String> categoryOptions = new ArrayList<>();
+    private Map<String, String> savingCircleMap = new HashMap<>(); // Maps display name to circle ID
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,6 +62,7 @@ public class ExpenseLog extends AppCompatActivity {
 
         // ViewModel setup
         expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class);
+        savingCircleViewModel = new ViewModelProvider(this).get(SavingCircleViewModel.class);
         binding.setLifecycleOwner(this);
 
         // Receive Dashboard-selected date
@@ -92,16 +103,59 @@ public class ExpenseLog extends AppCompatActivity {
         });
         setupRecyclerView();
 
-        // Category dropdown setup...
-        String[] options = {"Food", "Transport", "Entertainment",
-                            "Bills", "Health", "Shopping", "Other"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.dropdown_item, options);
-        AutoCompleteTextView dropdown = findViewById(R.id.categoryInput);
-        dropdown.setAdapter(adapter);
+        // Setup category dropdown with Savings Circles
+        setupCategoryDropdown();
 
         // Create Expense button
         View createExpenseBtn = findViewById(R.id.create_Expense);
         createExpenseBtn.setOnClickListener(v -> saveExpense());
+    }
+
+    private void setupCategoryDropdown() {
+        AutoCompleteTextView dropdown = findViewById(R.id.categoryInput);
+        
+        // Start with regular categories
+        categoryOptions.clear();
+        categoryOptions.add("Food");
+        categoryOptions.add("Transport");
+        categoryOptions.add("Entertainment");
+        categoryOptions.add("Bills");
+        categoryOptions.add("Health");
+        categoryOptions.add("Shopping");
+        categoryOptions.add("Other");
+
+        // Set initial adapter with just regular categories
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.dropdown_item, categoryOptions);
+        dropdown.setAdapter(adapter);
+
+        // Load savings circles and add them to the dropdown
+        savingCircleViewModel.getSavingCircles().observe(this, circles -> {
+            // Always start fresh with base categories
+            categoryOptions.clear();
+            categoryOptions.add("Food");
+            categoryOptions.add("Transport");
+            categoryOptions.add("Entertainment");
+            categoryOptions.add("Bills");
+            categoryOptions.add("Health");
+            categoryOptions.add("Shopping");
+            categoryOptions.add("Other");
+            savingCircleMap.clear();
+
+            // Add savings circles if available
+            if (circles != null && !circles.isEmpty()) {
+                for (SavingCircle circle : circles) {
+                    String displayName = "💰 " + circle.getChallengeTitle() + " (" + circle.getGroupName() + ")";
+                    categoryOptions.add(displayName);
+                    savingCircleMap.put(displayName, circle.getId());
+                }
+                Log.d("ExpenseLog", "Added " + circles.size() + " savings circles to dropdown");
+            }
+
+            // Update the adapter with the complete list
+            ArrayAdapter<String> updatedAdapter = new ArrayAdapter<>(this, R.layout.dropdown_item, categoryOptions);
+            dropdown.setAdapter(updatedAdapter);
+            Log.d("ExpenseLog", "Category dropdown updated with " + categoryOptions.size() + " options");
+        });
     }
 
     private void setupDatePicker() {
@@ -176,23 +230,61 @@ public class ExpenseLog extends AppCompatActivity {
             return;
         }
 
-        // Find matching category from your enum
+        // Check if it's a savings circle (starts with 💰)
+        String savingCircleId = null;
         Category category = null;
-        for (Category cat : Category.values()) {
-            if (cat.getDisplayName().equals(categoryName)) {
-                category = cat;
-                break;
+        
+        if (categoryName.startsWith("💰 ")) {
+            // It's a savings circle
+            savingCircleId = savingCircleMap.get(categoryName);
+            if (savingCircleId == null) {
+                categoryInput.setError("Invalid savings circle selected");
+                categoryInput.requestFocus();
+                return;
+            }
+            // Use "OTHER" category for savings circle expenses
+            category = Category.OTHER;
+        } else {
+            // Regular category
+            for (Category cat : Category.values()) {
+                if (cat.getDisplayName().equals(categoryName)) {
+                    category = cat;
+                    break;
+                }
+            }
+            
+            if (category == null) {
+                categoryInput.setError("Please select a valid category");
+                categoryInput.requestFocus();
+                return;
             }
         }
 
-        if (category == null) {
-            categoryInput.setError("Please select a valid category");
-            categoryInput.requestFocus();
-            return;
+        // Parse expense date to timestamp
+        long expenseTimestamp;
+        try {
+            Date expenseDate = dateFormat.parse(date);
+            expenseTimestamp = expenseDate != null ? expenseDate.getTime() : System.currentTimeMillis();
+        } catch (ParseException e) {
+            expenseTimestamp = System.currentTimeMillis();
         }
 
         // Save to Firebase through ViewModel
-        expenseViewModel.addExpense(name, amount, category, date, notes);
+        expenseViewModel.addExpense(name, amount, category, date, notes, savingCircleId, 
+                savingCircleId != null ? expenseTimestamp : -1);
+
+        // If linked to a savings circle, deduct from the circle
+        if (savingCircleId != null && !savingCircleId.isEmpty()) {
+            FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+            if (currentUser != null && currentUser.getEmail() != null) {
+                savingCircleViewModel.deductExpenseFromMemberAtDate(
+                        savingCircleId, 
+                        currentUser.getEmail(), 
+                        amount, 
+                        expenseTimestamp
+                );
+            }
+        }
 
         // Hide form, show RecyclerView
         View expenseLogForm = findViewById(R.id.form_Container);
@@ -303,7 +395,38 @@ public class ExpenseLog extends AppCompatActivity {
 
             @Override
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-                String expenseId = adapter.getExpenseAt(viewHolder.getAdapterPosition()).getId();
+                Expense expense = adapter.getExpenseAt(viewHolder.getAdapterPosition());
+                String expenseId = expense.getId();
+                
+                // Check if expense is linked to a savings circle
+                if (expense.isLinkedToSavingCircle()) {
+                    String savingCircleId = expense.getSavingCircleId();
+                    double amount = expense.getAmount();
+                    String date = expense.getDate();
+                    
+                    // Parse expense date to timestamp
+                    long expenseTimestamp;
+                    try {
+                        Date expenseDate = dateFormat.parse(date);
+                        expenseTimestamp = expenseDate != null ? expenseDate.getTime() : System.currentTimeMillis();
+                    } catch (ParseException e) {
+                        expenseTimestamp = System.currentTimeMillis();
+                    }
+                    
+                    // Get current user email
+                    FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                    if (currentUser != null && currentUser.getEmail() != null) {
+                        // Restore the amount to the savings circle
+                        savingCircleViewModel.addBackExpenseToMemberAtDate(
+                                savingCircleId,
+                                currentUser.getEmail(),
+                                amount,
+                                expenseTimestamp
+                        );
+                    }
+                }
+                
+                // Delete the expense
                 expenseViewModel.deleteExpense(expenseId);
             }
         }).attachToRecyclerView(recyclerView);
