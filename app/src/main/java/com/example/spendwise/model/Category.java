@@ -11,12 +11,12 @@ public enum Category {
 
     private String displayName;
 
-    // Constructor
+    // Constructor for enum values
     Category(String displayName) {
         this.displayName = displayName;
     }
 
-    // Get the display name
+    // Get the display name for UI
     public String getDisplayName() {
         return displayName;
     }

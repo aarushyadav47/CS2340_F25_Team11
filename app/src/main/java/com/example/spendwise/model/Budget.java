@@ -11,9 +11,11 @@ public class Budget {
     private String date;
     private String freq;
 
+    // Default constructor
     public Budget() {
     }
 
+    // Constructor with initial amount
     public Budget(String name, double amount, Category category, String date,
                   String freq) {
         this.id = UUID.randomUUID().toString();
@@ -25,6 +27,7 @@ public class Budget {
         this.freq = freq;
     }
 
+    // Constructor with separate original amount
     public Budget(String name, double amount, double originalAmount,
                   Category category, String date, String freq) {
         this.id = UUID.randomUUID().toString();
@@ -36,6 +39,7 @@ public class Budget {
         this.freq = freq;
     }
 
+    // Getter and setter methods
     public String getId() {
         return id;
     }
@@ -44,14 +48,17 @@ public class Budget {
         this.id = id;
     }
 
+    // Get budget name
     public String getName() {
         return name;
     }
 
+    // Get current budget amount
     public double getAmount() {
         return amount;
     }
 
+    // Get original budget amount
     public double getOriginalAmount() {
         return originalAmount;
     }

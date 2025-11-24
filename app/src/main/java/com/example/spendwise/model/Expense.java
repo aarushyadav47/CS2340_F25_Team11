@@ -14,6 +14,7 @@ public class Expense {
     public Expense() {
     }
 
+    // Constructor without saving circle link
     public Expense(String name, double amount, Category category, String date, String notes) {
         this.id = UUID.randomUUID().toString();
         this.name = name;
@@ -24,6 +25,7 @@ public class Expense {
         this.savingCircleId = null;
     }
 
+    // Constructor with saving circle link
     public Expense(String name, double amount, Category category, String date, String notes, String savingCircleId) {
         this.id = UUID.randomUUID().toString();
         this.name = name;
@@ -34,6 +36,7 @@ public class Expense {
         this.savingCircleId = savingCircleId;
     }
 
+    // Getter and setter methods
     public String getId() {
         return id;
     }
@@ -41,10 +44,13 @@ public class Expense {
         this.id = id;
     }
 
+    // Get expense name
     public String getName() {
         return name; }
+    // Get expense amount
     public double getAmount() {
         return amount; }
+    // Get expense category
     public Category getCategory() {
         return category; }
     public String getDate() {
@@ -57,6 +63,7 @@ public class Expense {
     public void setSavingCircleId(String savingCircleId) {
         this.savingCircleId = savingCircleId;
     }
+    // Check if expense is linked to a saving circle
     public boolean isLinkedToSavingCircle() {
         return savingCircleId != null && !savingCircleId.isEmpty();
     }
