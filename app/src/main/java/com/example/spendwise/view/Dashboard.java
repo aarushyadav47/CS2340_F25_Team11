@@ -4,7 +4,10 @@ import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,6 +34,11 @@ import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
+import com.example.spendwise.viewModel.NotificationViewModel;
+import com.example.spendwise.adapter.NotificationAdapter;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -62,6 +70,12 @@ public class Dashboard extends AppCompatActivity {
     private static final String PREFS_NAME = "SpendWisePrefs";
     private static final String KEY_SIMULATED_DATE = "simulated_date";
 
+    private NotificationViewModel notificationViewModel;
+    private NotificationAdapter notificationAdapter;
+    private long currentDashboardTimestamp;
+
+    private boolean isNotificationDialogShowing = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -75,6 +89,7 @@ public class Dashboard extends AppCompatActivity {
         expenseViewModel = new ViewModelProvider(this).get(ExpenseViewModel.class);
         budgetViewModel = new ViewModelProvider(this).get(BudgetViewModel.class);
         dashboardAnalyticsViewModel = new ViewModelProvider(this).get(DashboardAnalyticsViewModel.class);
+        notificationViewModel = new ViewModelProvider(this).get(NotificationViewModel.class);
         binding.setLifecycleOwner(this);
 
         pieChart = findViewById(R.id.spending_pie_chart);
@@ -93,10 +108,106 @@ public class Dashboard extends AppCompatActivity {
         setupQuickActions();
         setupBudgetCards();
         setupRemainingBudgetsButton();
+        setupNotifications();
 
         loadDashboardData();
     }
 
+    private void setupNotifications() {
+        // Observe notifications and show dialog when they exist
+        notificationViewModel.getPendingNotifications().observe(this, notifications -> {
+            if (notifications != null && !notifications.isEmpty()) {
+                showNotificationDialog(notifications);
+            }
+        });
+    }
+
+    private void showNotificationDialog(List<NotificationViewModel.NotificationItem> notifications) {
+        Log.d("Dashboard", "showNotificationDialog called with " + notifications.size() + " notifications");
+
+        // Prevent showing multiple dialogs
+        if (isNotificationDialogShowing) {
+            Log.d("Dashboard", "Dialog already showing");
+            return;
+        }
+
+        isNotificationDialogShowing = true;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_notification_reminder, null);
+        builder.setView(dialogView);
+
+        AlertDialog dialog = builder.create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        // Populate notifications
+        LinearLayout notificationsContainer = dialogView.findViewById(R.id.notifications_container);
+        notificationsContainer.removeAllViews();
+
+        for (NotificationViewModel.NotificationItem item : notifications) {
+            View itemView = getLayoutInflater().inflate(R.layout.item_notification_dialog, notificationsContainer, false);
+            bindNotificationItem(itemView, item);
+            notificationsContainer.addView(itemView);
+        }
+
+        // Setup buttons
+        View btnDismiss = dialogView.findViewById(R.id.btn_dismiss);
+        View btnViewBudgets = dialogView.findViewById(R.id.btn_view_budgets);
+
+        btnDismiss.setOnClickListener(v -> {
+            // Just dismiss, don't save preference
+            isNotificationDialogShowing = false;
+            dialog.dismiss();
+        });
+
+        btnViewBudgets.setOnClickListener(v -> {
+            isNotificationDialogShowing = false;
+            dialog.dismiss();
+            Intent intent = new Intent(Dashboard.this, Budgetlog.class);
+            intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
+
+        dialog.setOnDismissListener(d -> {
+            isNotificationDialogShowing = false;
+        });
+
+        dialog.show();
+        Log.d("Dashboard", "Dialog shown successfully");
+    }
+
+    private void bindNotificationItem(View itemView, NotificationViewModel.NotificationItem item) {
+        ImageView iconView = itemView.findViewById(R.id.notification_icon);
+        TextView titleText = itemView.findViewById(R.id.notification_title);
+        TextView subtitleText = itemView.findViewById(R.id.notification_subtitle);
+        TextView timeText = itemView.findViewById(R.id.notification_time);
+        View urgencyIndicator = itemView.findViewById(R.id.urgency_indicator);
+
+        titleText.setText(item.getTitle());
+        subtitleText.setText(item.getSubtitle());
+        timeText.setText(item.getTimeMessage());
+
+        // Set icon based on type
+        if (item.getType() == NotificationViewModel.NotificationItem.Type.BUDGET) {
+            iconView.setImageResource(R.drawable.ic_budget);
+        } else {
+            iconView.setImageResource(R.drawable.ic_savings);
+        }
+
+        // Set urgency color based on days remaining
+        int urgencyColor;
+        if (item.getDaysRemaining() == 0) {
+            urgencyColor = 0xFFFF3B30; // Red
+        } else if (item.getDaysRemaining() == 1) {
+            urgencyColor = 0xFFFF9500; // Orange
+        } else {
+            urgencyColor = 0xFFFFCC00; // Yellow
+        }
+        urgencyIndicator.setBackgroundColor(urgencyColor);
+    }
     private void setupPieChart() {
         pieChart.setUsePercentValues(true);
         pieChart.getDescription().setEnabled(false);
@@ -239,6 +350,13 @@ public class Dashboard extends AppCompatActivity {
                 (view, year, month, dayOfMonth) -> {
                     currentSimulatedDate.set(year, month, dayOfMonth);
                     saveSimulatedDate();
+
+                    // Clear the dismiss preference for the new date
+                    String newDate = shortDateFormat.format(currentSimulatedDate.getTime());
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.remove("notifications_dismissed_" + newDate);
+                    editor.apply();
+
                     updateDateDisplay();
                     loadDashboardData();
                     Toast.makeText(this,
@@ -494,6 +612,7 @@ public class Dashboard extends AppCompatActivity {
         });
     }
 
+
     private void loadDashboardData() {
         Calendar weekStart = (Calendar) currentSimulatedDate.clone();
         weekStart.set(Calendar.DAY_OF_WEEK, weekStart.getFirstDayOfWeek());
@@ -509,6 +628,12 @@ public class Dashboard extends AppCompatActivity {
                 monthEnd.getActualMaximum(Calendar.DAY_OF_MONTH));
 
         dashboardAnalyticsViewModel.updateWindow(monthStart.getTime(), monthEnd.getTime());
+
+        // Store current timestamp for notifications
+        currentDashboardTimestamp = currentSimulatedDate.getTimeInMillis();
+
+        // Check for notifications based on the dashboard date
+        notificationViewModel.checkNotificationsForDate(currentDashboardTimestamp);
 
         expenseViewModel.getExpenses().observe(this, expenses -> {
             if (expenses != null) {

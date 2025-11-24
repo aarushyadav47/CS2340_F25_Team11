@@ -82,6 +82,27 @@
             android:textSize="12sp"
             android:textColor="#999999"/>
 
+        <TextView
+            android:id="@+id/text_view_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Loading..."
+            android:textSize="14sp"
+            android:textColor="@android:color/holo_green_dark"
+            android:visibility="visible"/>
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="@android:color/holo_green_dark"
+            android:visibility="visible"/>
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

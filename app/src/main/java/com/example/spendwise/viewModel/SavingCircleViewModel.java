@@ -462,7 +462,7 @@ public class SavingCircleViewModel extends ViewModel {
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(joinDate);
-        
+
         long cycleStartDate;
         long cycleEndDate;
 
@@ -482,7 +482,7 @@ public class SavingCircleViewModel extends ViewModel {
             calendar.set(Calendar.SECOND, 0);
             calendar.set(Calendar.MILLISECOND, 0);
             cycleStartDate = calendar.getTimeInMillis();
-            
+
             // Move to last day of month
             calendar.add(Calendar.MONTH, 1);
             calendar.add(Calendar.DAY_OF_MONTH, -1);
@@ -497,18 +497,20 @@ public class SavingCircleViewModel extends ViewModel {
 
         String sanitizedEmail = sanitizeEmail(memberEmail);
 
-        circlesRef.child(circleId)
-                .child("members")
-                .child(sanitizedEmail)
-                .child("cycles")
-                .child(firstCycle.getCycleId())
-                .setValue(firstCycle)
-                .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Initial cycle created for member: " + memberEmail);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error creating initial cycle", e);
-                });
+        // Use the new centralized helper method
+        saveCycleToDatabase(circlesRef, circleId, memberEmail, firstCycle, new OnCycleCreatedListener() {
+            @Override
+            public void onCycleCreated(MemberCycle cycle) {
+                // Success from helper
+                Log.d(TAG, "Initial cycle created for member: " + memberEmail);
+            }
+
+            @Override
+            public void onError(String message) {
+                // Error from helper
+                Log.e(TAG, "Error creating initial cycle: " + message);
+            }
+        });
     }
 
     public void getCurrentCycle(String circleId, String memberEmail,
@@ -621,15 +623,20 @@ public class SavingCircleViewModel extends ViewModel {
 
             MemberCycle nextCycle = MemberCycle.createNextCycle(previousCycle, frequency);
 
-            circlesRef.child(circleId)
-                    .child("members")
-                    .child(sanitizedEmail)
-                    .child("cycles")
-                    .child(nextCycle.getCycleId())
-                    .setValue(nextCycle)
-                    .addOnSuccessListener(aVoid -> {
-                        Log.d(TAG, "Next cycle created: " + nextCycle.getCycleId());
-                    });
+            // Use the new centralized helper method
+            saveCycleToDatabase(circlesRef, circleId, memberEmail, nextCycle, new OnCycleCreatedListener() {
+                @Override
+                public void onCycleCreated(MemberCycle cycle) {
+                    // Success from helper
+                    Log.d(TAG, "Next cycle created: " + nextCycle.getCycleId());
+                }
+
+                @Override
+                public void onError(String message) {
+                    // Error handling (you may want to add logging here)
+                    Log.e(TAG, "Error creating next cycle: " + message);
+                }
+            });
         });
     }
 
@@ -666,7 +673,7 @@ public class SavingCircleViewModel extends ViewModel {
                             .setValue(cycle)
                             .addOnSuccessListener(aVoid -> {
                                 Log.d(TAG, "Expense recorded in cycle: " + cycle.getCycleId() + " for date: " + new java.util.Date(expenseDate));
-                                
+
                                 // Sync currentAmount with the cycle's endAmount if this is the current cycle
                                 // Check if this cycle contains the current date
                                 long currentTime = System.currentTimeMillis();
@@ -732,7 +739,7 @@ public class SavingCircleViewModel extends ViewModel {
                             .setValue(cycle)
                             .addOnSuccessListener(aVoid -> {
                                 Log.d(TAG, "Expense restored in cycle: " + cycle.getCycleId());
-                                
+
                                 // Sync currentAmount if this is the current cycle
                                 long currentTime = System.currentTimeMillis();
                                 if (cycle.isDateInCycle(currentTime)) {
@@ -1346,5 +1353,407 @@ public class SavingCircleViewModel extends ViewModel {
         void onSuccess();
 
         void onError(String message);
+    }
+
+    /**
+     * The core private helper method for saving/updating a MemberCycle object in Firebase.
+     * This ensures all cycle database writes are centralized and consistent.
+     */
+    private void saveCycleToDatabase(DatabaseReference circlesRef, String circleId, String memberEmail,
+                                     MemberCycle cycle, OnCycleCreatedListener listener) {
+        if (circlesRef == null) {
+            if (listener != null) listener.onError("Database reference not initialized");
+            return;
+        }
+
+        String sanitizedEmail = sanitizeEmail(memberEmail);
+
+        circlesRef.child(circleId)
+                .child("members")
+                .child(sanitizedEmail)
+                .child("cycles")
+                .child(cycle.getCycleId())
+                .setValue(cycle)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Cycle saved/updated: " + cycle.getCycleId());
+                    if (listener != null) listener.onCycleCreated(cycle);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error saving cycle", e);
+                    if (listener != null) listener.onError(e.getMessage());
+                });
+    }
+
+    /** Finds the MemberCycle in the list with the latest end date. */
+    private MemberCycle findLastCycle(List<MemberCycle> cycles) {
+        if (cycles == null || cycles.isEmpty()) return null;
+        MemberCycle lastCycle = null;
+        for (MemberCycle cycle : cycles) {
+            if (lastCycle == null || cycle.getEndDate() > lastCycle.getEndDate()) {
+                lastCycle = cycle;
+            }
+        }
+        return lastCycle;
+    }
+
+    private void createNextCycleAndReturn(String circleId, String memberEmail,
+                                          MemberCycle previousCycle, String frequency,
+                                          OnCycleLoadedListener finalListener) {
+
+        if (!previousCycle.isComplete()) {
+            // Ensure the previous cycle is marked complete first
+            completeCycleAndCreateNext(circleId, memberEmail, previousCycle, frequency, finalListener);
+        } else {
+            // Previous cycle already complete, just create next one
+            getCircleCreatorUid(circleId, creatorUid -> {
+                if (creatorUid == null) {
+                    finalListener.onError("Cannot find circle creator for next cycle.");
+                    return;
+                }
+
+                DatabaseReference circlesRef = database.getReference("users")
+                        .child(creatorUid).child("savingCircles");
+
+                MemberCycle nextCycle = MemberCycle.createNextCycle(previousCycle, frequency);
+
+                saveCycleToDatabase(circlesRef, circleId, memberEmail, nextCycle, new OnCycleCreatedListener() {
+                    @Override
+                    public void onCycleCreated(MemberCycle cycle) {
+                        Log.d(TAG, "Next cycle created: " + cycle.getCycleId());
+                        finalListener.onCycleLoaded(cycle);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        Log.e(TAG, "Error creating next cycle: " + message);
+                        finalListener.onError(message);
+                    }
+                });
+            });
+        }
+    }
+
+    /**
+     * Public high-level command to ensure a cycle exists and is active for the given date.
+     * If the cycle is missing or expired, it handles completion of the previous cycle
+     * and creation of the next one up to the check date.
+     */
+    public void ensureCycleIsActiveForDate(String circleId, String memberEmail, long checkDate,
+                                           String frequency, double allocation,
+                                           OnCycleLoadedListener listener) {
+        // 1. Try to get the existing cycle for the date
+        getCycleAtDate(circleId, memberEmail, checkDate, new OnCycleLoadedListener() {
+            @Override
+            public void onCycleLoaded(MemberCycle cycle) {
+                // Case 1: Cycle exists.
+                if (cycle.shouldBeComplete() && !cycle.isComplete()) {
+                    // Cycle should be complete but isn't marked as such. Complete it first.
+                    completeCycleAndCreateNext(circleId, memberEmail, cycle, frequency, listener);
+                } else {
+                    // Cycle is valid for the date. Return it.
+                    listener.onCycleLoaded(cycle);
+                }
+            }
+
+            @Override
+            public void onCycleNotFound() {
+                // Case 2: No cycle found for the checkDate. Use one-time get instead of observe
+                getMemberCycleHistoryOnce(circleId, memberEmail, cycles -> {
+                    MemberCycle lastCycle = findLastCycle(cycles);
+
+                    if (cycles == null || cycles.isEmpty() || lastCycle == null) {
+                        // Case 2A: No cycles ever. Create the first cycle
+                        initializeMemberCycle(circleId, memberEmail, checkDate, frequency, allocation);
+                        // Re-run getCycleAtDate to fetch the newly created cycle and return it
+                        // Add a small delay to ensure the write completes
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                            getCycleAtDate(circleId, memberEmail, checkDate, listener);
+                        }, 500);
+
+                    } else if (checkDate > lastCycle.getEndDate()) {
+                        // Case 2B: Gap detected. Complete the last cycle and create next ones until we reach checkDate
+                        fillCycleGap(circleId, memberEmail, lastCycle, checkDate, frequency, listener);
+
+                    } else {
+                        // This shouldn't happen, but handle it
+                        listener.onError("Cycle logic inconsistency: Cycle history exists, but none found for the date.");
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                listener.onError("Error checking cycle existence: " + message);
+            }
+        });
+    }
+
+    // New helper method to get cycle history once (not observe)
+    public void getMemberCycleHistoryOnce(String circleId, String memberEmail, CycleHistoryCallback callback) {
+        if (savingCirclesRef == null) {
+            callback.onHistoryLoaded(new ArrayList<>());
+            return;
+        }
+
+        getCircleCreatorUid(circleId, creatorUid -> {
+            if (creatorUid == null) {
+                Log.e(TAG, "Cannot find circle creator for cycle history");
+                callback.onHistoryLoaded(new ArrayList<>());
+                return;
+            }
+
+            DatabaseReference circlesRef = database.getReference("users")
+                    .child(creatorUid).child("savingCircles");
+            String sanitizedEmail = sanitizeEmail(memberEmail);
+
+            circlesRef.child(circleId)
+                    .child("members")
+                    .child(sanitizedEmail)
+                    .child("cycles")
+                    .get()
+                    .addOnSuccessListener(dataSnapshot -> {
+                        List<MemberCycle> cycleList = new ArrayList<>();
+                        for (DataSnapshot cycleSnapshot : dataSnapshot.getChildren()) {
+                            MemberCycle cycle = cycleSnapshot.getValue(MemberCycle.class);
+                            if (cycle != null) {
+                                cycleList.add(cycle);
+                            }
+                        }
+                        cycleList.sort((c1, c2) -> Long.compare(c1.getStartDate(), c2.getStartDate()));
+                        callback.onHistoryLoaded(cycleList);
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error loading cycle history: " + e.getMessage());
+                        callback.onHistoryLoaded(new ArrayList<>());
+                    });
+        });
+    }
+
+    public interface CycleHistoryCallback {
+        void onHistoryLoaded(List<MemberCycle> cycles);
+    }
+
+    // New method to complete a cycle and create the next one sequentially
+    private void completeCycleAndCreateNext(String circleId, String memberEmail,
+                                            MemberCycle cycle, String frequency,
+                                            OnCycleLoadedListener finalListener) {
+        getCircleCreatorUid(circleId, creatorUid -> {
+            if (creatorUid == null) {
+                finalListener.onError("Cannot find circle creator");
+                return;
+            }
+
+            DatabaseReference circlesRef = database.getReference("users")
+                    .child(creatorUid).child("savingCircles");
+            String sanitizedEmail = sanitizeEmail(memberEmail);
+
+            // Step 1: Mark cycle as complete
+            cycle.setComplete(true);
+
+            circlesRef.child(circleId)
+                    .child("members")
+                    .child(sanitizedEmail)
+                    .child("cycles")
+                    .child(cycle.getCycleId())
+                    .setValue(cycle)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Cycle marked as complete: " + cycle.getCycleId());
+
+                        // Step 2: Create next cycle only after completion is saved
+                        MemberCycle nextCycle = MemberCycle.createNextCycle(cycle, frequency);
+
+                        saveCycleToDatabase(circlesRef, circleId, memberEmail, nextCycle, new OnCycleCreatedListener() {
+                            @Override
+                            public void onCycleCreated(MemberCycle newCycle) {
+                                Log.d(TAG, "Next cycle created after completion: " + newCycle.getCycleId());
+                                finalListener.onCycleLoaded(newCycle);
+                            }
+
+                            @Override
+                            public void onError(String message) {
+                                finalListener.onError("Error creating next cycle: " + message);
+                            }
+                        });
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error completing cycle", e);
+                        finalListener.onError("Error completing cycle: " + e.getMessage());
+                    });
+        });
+    }
+
+    // New method to fill gaps by creating multiple cycles sequentially
+    private void fillCycleGap(String circleId, String memberEmail, MemberCycle lastCycle,
+                              long targetDate, String frequency, OnCycleLoadedListener finalListener) {
+        // First, ensure the last cycle is marked complete
+        if (!lastCycle.isComplete()) {
+            getCircleCreatorUid(circleId, creatorUid -> {
+                if (creatorUid == null) {
+                    finalListener.onError("Cannot find circle creator");
+                    return;
+                }
+
+                DatabaseReference circlesRef = database.getReference("users")
+                        .child(creatorUid).child("savingCircles");
+                String sanitizedEmail = sanitizeEmail(memberEmail);
+
+                lastCycle.setComplete(true);
+
+                circlesRef.child(circleId)
+                        .child("members")
+                        .child(sanitizedEmail)
+                        .child("cycles")
+                        .child(lastCycle.getCycleId())
+                        .setValue(lastCycle)
+                        .addOnSuccessListener(aVoid -> {
+                            Log.d(TAG, "Last cycle marked complete before filling gap: " + lastCycle.getCycleId());
+                            createCyclesUntilDate(circleId, memberEmail, lastCycle, targetDate, frequency, finalListener);
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "Error marking last cycle complete", e);
+                            finalListener.onError("Error completing last cycle: " + e.getMessage());
+                        });
+            });
+        } else {
+            createCyclesUntilDate(circleId, memberEmail, lastCycle, targetDate, frequency, finalListener);
+        }
+    }
+
+    // Recursively create cycles until we have one that contains the target date
+    private void createCyclesUntilDate(String circleId, String memberEmail, MemberCycle previousCycle,
+                                       long targetDate, String frequency, OnCycleLoadedListener finalListener) {
+        MemberCycle nextCycle = MemberCycle.createNextCycle(previousCycle, frequency);
+
+        getCircleCreatorUid(circleId, creatorUid -> {
+            if (creatorUid == null) {
+                finalListener.onError("Cannot find circle creator");
+                return;
+            }
+
+            DatabaseReference circlesRef = database.getReference("users")
+                    .child(creatorUid).child("savingCircles");
+
+            saveCycleToDatabase(circlesRef, circleId, memberEmail, nextCycle, new OnCycleCreatedListener() {
+                @Override
+                public void onCycleCreated(MemberCycle newCycle) {
+                    Log.d(TAG, "Gap-filling cycle created: " + newCycle.getCycleId());
+
+                    if (newCycle.isDateInCycle(targetDate)) {
+                        // We've reached the cycle containing the target date
+                        finalListener.onCycleLoaded(newCycle);
+                    } else if (targetDate > newCycle.getEndDate()) {
+                        // Need to create more cycles - mark this one complete and continue
+                        newCycle.setComplete(true);
+                        circlesRef.child(circleId)
+                                .child("members")
+                                .child(sanitizeEmail(memberEmail))
+                                .child("cycles")
+                                .child(newCycle.getCycleId())
+                                .setValue(newCycle)
+                                .addOnSuccessListener(aVoid -> {
+                                    createCyclesUntilDate(circleId, memberEmail, newCycle, targetDate, frequency, finalListener);
+                                })
+                                .addOnFailureListener(e -> {
+                                    finalListener.onError("Error completing intermediate cycle: " + e.getMessage());
+                                });
+                    } else {
+                        // This shouldn't happen, but handle it
+                        finalListener.onCycleLoaded(newCycle);
+                    }
+                }
+
+                @Override
+                public void onError(String message) {
+                    finalListener.onError("Error creating gap-filling cycle: " + message);
+                }
+            });
+        });
+    }
+
+    public interface MembersCallback {
+        void onMembersLoaded(List<SavingCircleMember> members);
+    }
+
+    /**
+     * Get circle members with one-time read (not LiveData observer)
+     */
+    public void getSavingCircleMembersOnce(String circleId, MembersCallback callback) {
+        if (savingCirclesRef == null) {
+            Log.e(TAG, "savingCirclesRef is null! Cannot load members.");
+            callback.onMembersLoaded(new ArrayList<>());
+            return;
+        }
+
+        // First, get the circle to find the creator's UID
+        savingCirclesRef.child(circleId).get()
+                .addOnSuccessListener(circleSnapshot -> {
+                    if (!circleSnapshot.exists()) {
+                        Log.e(TAG, "Circle not found in current user's path: " + circleId);
+                        // Try to find it in other users' paths (fallback)
+                        findCircleAndLoadMembersOnce(circleId, callback);
+                        return;
+                    }
+
+                    String creatorUid = circleSnapshot.child("creatorUid").getValue(String.class);
+                    if (creatorUid == null || creatorUid.isEmpty()) {
+                        // Backwards compatibility: if creatorUid is not set, assume current user is creator
+                        creatorUid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+                    }
+
+                    if (creatorUid != null) {
+                        // Read members from the creator's path (ONE-TIME)
+                        DatabaseReference creatorCirclesRef = database.getReference("users")
+                                .child(creatorUid).child("savingCircles");
+                        loadMembersFromPathOnce(creatorCirclesRef, circleId, callback);
+                    } else {
+                        Log.e(TAG, "Cannot determine creator UID for circle: " + circleId);
+                        callback.onMembersLoaded(new ArrayList<>());
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error finding circle: " + e.getMessage());
+                    findCircleAndLoadMembersOnce(circleId, callback);
+                });
+    }
+
+    private void findCircleAndLoadMembersOnce(String circleId, MembersCallback callback) {
+        database.getReference("users").get()
+                .addOnSuccessListener(usersSnapshot -> {
+                    for (DataSnapshot userSnapshot : usersSnapshot.getChildren()) {
+                        DataSnapshot circleSnapshot = userSnapshot.child("savingCircles").child(circleId);
+                        if (circleSnapshot.exists()) {
+                            String creatorUid = userSnapshot.getKey();
+                            DatabaseReference creatorCirclesRef = database.getReference("users")
+                                    .child(creatorUid).child("savingCircles");
+                            loadMembersFromPathOnce(creatorCirclesRef, circleId, callback);
+                            return;
+                        }
+                    }
+                    Log.e(TAG, "Circle not found in any user path: " + circleId);
+                    callback.onMembersLoaded(new ArrayList<>());
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error searching for circle: " + e.getMessage());
+                    callback.onMembersLoaded(new ArrayList<>());
+                });
+    }
+
+    private void loadMembersFromPathOnce(DatabaseReference circlesRef, String circleId, MembersCallback callback) {
+        circlesRef.child(circleId).child("members").get()
+                .addOnSuccessListener(snapshot -> {
+                    List<SavingCircleMember> members = new ArrayList<>();
+                    for (DataSnapshot memberSnapshot : snapshot.getChildren()) {
+                        SavingCircleMember member = memberSnapshot.getValue(SavingCircleMember.class);
+                        if (member != null) {
+                            members.add(member);
+                        }
+                    }
+                    Log.d(TAG, "Loaded " + members.size() + " members for circle " + circleId + " (one-time)");
+                    callback.onMembersLoaded(members);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading members for circle " + circleId + ": " + e.getMessage());
+                    callback.onMembersLoaded(new ArrayList<>());
+                });
     }
 }

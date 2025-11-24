@@ -25,168 +25,226 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Main Content -->
-        <FrameLayout
+        <!-- Main Content - Changed from FrameLayout to ScrollView -->
+        <ScrollView
             android:id="@+id/budgetLog_body"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_margin="16dp"
             android:background="@android:color/white"
+            android:fillViewport="true"
             app:layout_constraintTop_toBottomOf="@id/budgetLog_title"
             app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <TextView
-                android:id="@+id/budgetLog_msg"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="Add a budget"
-                android:textColor="#AAAAAA"
-                android:visibility="gone"
-                android:textSize="16sp" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/budget_recycler_view"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:padding="8dp"
-                android:layout_marginTop="60dp"
-                android:paddingBottom="96dp"
-                android:clipToPadding="false"
-                android:visibility="visible"/>
-
             <LinearLayout
-                android:id="@+id/form_Container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:orientation="vertical"
-                android:padding="24dp"
-                android:visibility="gone">
+                android:orientation="vertical">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/budgetNameInputLayout"
-                    android:layout_width="250dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/budgetNameInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Budget Name"
-                        android:inputType="text"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/amountInputLayout"
+                <!-- Budget Form -->
+                <LinearLayout
+                    android:id="@+id/form_Container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp">
+                    android:layout_gravity="center"
+                    android:orientation="vertical"
+                    android:padding="24dp"
+                    android:visibility="gone">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/amountInput"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/budgetNameInputLayout"
+                        android:layout_width="250dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/budgetNameInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Budget Name"
+                            android:inputType="text"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/amountInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Amount"
-                        android:inputType="numberDecimal"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_marginBottom="16dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/categoryInputLayout"
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/amountInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Amount"
+                            android:inputType="numberDecimal"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/categoryInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:endIconMode="dropdown_menu">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/categoryInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Category"
+                            android:inputType="none"
+                            android:textSize="14sp"
+                            android:padding="16dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/freqInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="24dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:endIconMode="dropdown_menu">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/freqInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Frequency"
+                            android:inputType="none"
+                            android:textSize="14sp"
+                            android:padding="16dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/dateInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/dateInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Date"
+                            android:inputType="date"
+                            android:focusable="false"
+                            android:clickable="true"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/create_Budget"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Create"
+                        android:textSize="16sp"
+                        android:textAllCaps="false"
+                        app:cornerRadius="28dp"
+                        android:backgroundTint="#000000"
+                        android:textColor="@android:color/white" />
+
+                </LinearLayout>
+
+                <!-- Budget Section -->
+                <LinearLayout
+                    android:id="@+id/budget_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp"
-                    app:endIconMode="dropdown_menu">
+                    android:orientation="vertical">
 
-                    <AutoCompleteTextView
-                        android:id="@+id/categoryInput"
+                    <TextView
+                        android:id="@+id/budgetLog_msg"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="32dp"
+                        android:text="Add a budget"
+                        android:textColor="#AAAAAA"
+                        android:visibility="gone"
+                        android:textSize="16sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/budget_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Category"
-                        android:inputType="none"
+                        android:nestedScrollingEnabled="false"
+                        android:padding="8dp"
+                        android:visibility="visible"/>
+
+                </LinearLayout>
+
+                <!-- Saving Circles Section -->
+                <LinearLayout
+                    android:id="@+id/saving_circles_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="16dp">
+
+                    <!-- Section Header -->
+                    <TextView
+                        android:id="@+id/saving_circles_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="My Saving Circles"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:padding="16dp"
+                        android:background="#E8E8E8"
+                        android:textColor="#000000"/>
+
+                    <!-- Empty Message -->
+                    <TextView
+                        android:id="@+id/saving_circles_empty_msg"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="No saving circles yet"
                         android:textSize="14sp"
-                        android:padding="16dp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:padding="16dp"
+                        android:gravity="center"
+                        android:textColor="#AAAAAA"
+                        android:visibility="gone"/>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/freqInputLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="24dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp"
-                    app:endIconMode="dropdown_menu">
-
-                    <AutoCompleteTextView
-                        android:id="@+id/freqInput"
+                    <!-- Saving Circles RecyclerView -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/saving_circles_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Frequency"
-                        android:inputType="none"
-                        android:textSize="14sp"
-                        android:padding="16dp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:nestedScrollingEnabled="false"
+                        android:padding="8dp"/>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/dateInputLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/dateInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Date"
-                        android:inputType="date"
-                        android:focusable="false"
-                        android:clickable="true"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/create_Budget"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:text="Create"
-                    android:textSize="16sp"
-                    android:textAllCaps="false"
-                    app:cornerRadius="28dp"
-                    android:backgroundTint="#000000"
-                    android:textColor="@android:color/white" />
+                </LinearLayout>
 
             </LinearLayout>
 
-        </FrameLayout>
+        </ScrollView>
 
         <!-- Bottom Navi Bar -->
         <LinearLayout
