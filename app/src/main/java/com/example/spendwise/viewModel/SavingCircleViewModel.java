@@ -1669,4 +1669,91 @@ public class SavingCircleViewModel extends ViewModel {
             });
         });
     }
+
+    public interface MembersCallback {
+        void onMembersLoaded(List<SavingCircleMember> members);
+    }
+
+    /**
+     * Get circle members with one-time read (not LiveData observer)
+     */
+    public void getSavingCircleMembersOnce(String circleId, MembersCallback callback) {
+        if (savingCirclesRef == null) {
+            Log.e(TAG, "savingCirclesRef is null! Cannot load members.");
+            callback.onMembersLoaded(new ArrayList<>());
+            return;
+        }
+
+        // First, get the circle to find the creator's UID
+        savingCirclesRef.child(circleId).get()
+                .addOnSuccessListener(circleSnapshot -> {
+                    if (!circleSnapshot.exists()) {
+                        Log.e(TAG, "Circle not found in current user's path: " + circleId);
+                        // Try to find it in other users' paths (fallback)
+                        findCircleAndLoadMembersOnce(circleId, callback);
+                        return;
+                    }
+
+                    String creatorUid = circleSnapshot.child("creatorUid").getValue(String.class);
+                    if (creatorUid == null || creatorUid.isEmpty()) {
+                        // Backwards compatibility: if creatorUid is not set, assume current user is creator
+                        creatorUid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+                    }
+
+                    if (creatorUid != null) {
+                        // Read members from the creator's path (ONE-TIME)
+                        DatabaseReference creatorCirclesRef = database.getReference("users")
+                                .child(creatorUid).child("savingCircles");
+                        loadMembersFromPathOnce(creatorCirclesRef, circleId, callback);
+                    } else {
+                        Log.e(TAG, "Cannot determine creator UID for circle: " + circleId);
+                        callback.onMembersLoaded(new ArrayList<>());
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error finding circle: " + e.getMessage());
+                    findCircleAndLoadMembersOnce(circleId, callback);
+                });
+    }
+
+    private void findCircleAndLoadMembersOnce(String circleId, MembersCallback callback) {
+        database.getReference("users").get()
+                .addOnSuccessListener(usersSnapshot -> {
+                    for (DataSnapshot userSnapshot : usersSnapshot.getChildren()) {
+                        DataSnapshot circleSnapshot = userSnapshot.child("savingCircles").child(circleId);
+                        if (circleSnapshot.exists()) {
+                            String creatorUid = userSnapshot.getKey();
+                            DatabaseReference creatorCirclesRef = database.getReference("users")
+                                    .child(creatorUid).child("savingCircles");
+                            loadMembersFromPathOnce(creatorCirclesRef, circleId, callback);
+                            return;
+                        }
+                    }
+                    Log.e(TAG, "Circle not found in any user path: " + circleId);
+                    callback.onMembersLoaded(new ArrayList<>());
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error searching for circle: " + e.getMessage());
+                    callback.onMembersLoaded(new ArrayList<>());
+                });
+    }
+
+    private void loadMembersFromPathOnce(DatabaseReference circlesRef, String circleId, MembersCallback callback) {
+        circlesRef.child(circleId).child("members").get()
+                .addOnSuccessListener(snapshot -> {
+                    List<SavingCircleMember> members = new ArrayList<>();
+                    for (DataSnapshot memberSnapshot : snapshot.getChildren()) {
+                        SavingCircleMember member = memberSnapshot.getValue(SavingCircleMember.class);
+                        if (member != null) {
+                            members.add(member);
+                        }
+                    }
+                    Log.d(TAG, "Loaded " + members.size() + " members for circle " + circleId + " (one-time)");
+                    callback.onMembersLoaded(members);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading members for circle " + circleId + ": " + e.getMessage());
+                    callback.onMembersLoaded(new ArrayList<>());
+                });
+    }
 }
