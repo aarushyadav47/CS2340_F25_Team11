@@ -1489,7 +1489,7 @@ public class SavingCircleViewModel extends ViewModel {
     }
 
     // New helper method to get cycle history once (not observe)
-    private void getMemberCycleHistoryOnce(String circleId, String memberEmail, CycleHistoryCallback callback) {
+    public void getMemberCycleHistoryOnce(String circleId, String memberEmail, CycleHistoryCallback callback) {
         if (savingCirclesRef == null) {
             callback.onHistoryLoaded(new ArrayList<>());
             return;
@@ -1529,7 +1529,7 @@ public class SavingCircleViewModel extends ViewModel {
         });
     }
 
-    private interface CycleHistoryCallback {
+    public interface CycleHistoryCallback {
         void onHistoryLoaded(List<MemberCycle> cycles);
     }
 
