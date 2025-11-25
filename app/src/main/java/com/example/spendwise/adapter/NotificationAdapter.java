@@ -65,9 +65,9 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             timeText.setText(item.getTimeMessage());
 
             // Set icon based on type
-            if (item.getType() == NotificationItem.Type.BUDGET) {
+            if (item.getType() == NotificationItem.Type.NO_EXPENSES) {
                 iconView.setImageResource(R.drawable.ic_budget);
-            } else {
+            } else if (item.getType() == NotificationItem.Type.BUDGET_90_PERCENT) {
                 iconView.setImageResource(R.drawable.ic_savings);
             }
 

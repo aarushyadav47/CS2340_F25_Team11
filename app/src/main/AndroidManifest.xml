@@ -13,6 +13,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Spendwise"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
             android:name="com.example.spendwise.view.MainActivity"
@@ -27,7 +28,12 @@
         <activity android:name="com.example.spendwise.view.Register" />
         <activity android:name="com.example.spendwise.view.Dashboard" />
         <activity android:name="com.example.spendwise.view.ExpenseLog" />
-        <activity android:name="com.example.spendwise.view.Chatbot" />
+        <activity android:name="com.example.spendwise.view.Chatbot" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity android:name="com.example.spendwise.view.Budgetlog" />
         <activity android:name="com.example.spendwise.view.SavingCircleLog" />
         <activity android:name="com.example.spendwise.view.SavingCircleDetailActivity" />

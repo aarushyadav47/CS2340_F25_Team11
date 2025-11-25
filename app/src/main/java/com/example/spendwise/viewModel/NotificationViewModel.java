@@ -24,13 +24,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class NotificationViewModel extends ViewModel {
 
     private static final String TAG = "NotificationViewModel";
-    private static final int WARNING_DAYS = 30; // Show notifications 2 days before
+    private static final int NO_EXPENSE_DAYS = 3; // Alert if no expenses for 3 days
+    private static final double BUDGET_WARNING_THRESHOLD = 0.90; // 90% of budget
 
     private final MutableLiveData<List<NotificationItem>> pendingNotifications;
     private final MutableLiveData<Boolean> hasNotifications;
@@ -38,12 +41,18 @@ public class NotificationViewModel extends ViewModel {
     private final FirebaseAuth auth;
     private final SimpleDateFormat dateFormat;
 
+    // Track shown notifications for this session
+    private final Set<String> shownNotificationIds;
+    private final Set<String> dismissedNotificationIds;
+
     public NotificationViewModel() {
         pendingNotifications = new MutableLiveData<>(new ArrayList<>());
         hasNotifications = new MutableLiveData<>(false);
         database = FirebaseDatabase.getInstance();
         auth = FirebaseAuth.getInstance();
         dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
+        shownNotificationIds = new HashSet<>();
+        dismissedNotificationIds = new HashSet<>();
     }
 
     /**
@@ -60,81 +69,250 @@ public class NotificationViewModel extends ViewModel {
         String uid = currentUser.getUid();
         DatabaseReference userRef = database.getReference("users").child(uid);
 
-        // Use a single list to collect all notifications
-        final List<NotificationItem> allNotifications = new ArrayList<>();
-        final boolean[] budgetsChecked = {false};
-        final boolean[] circlesChecked = {false};
+        // First, load dismissed notifications from Firebase
+        loadDismissedNotifications(userRef, () -> {
+            // Use a single list to collect all notifications
+            final List<NotificationItem> allNotifications = new ArrayList<>();
+            final boolean[] checksComplete = {false, false}; // expenses, budget90
 
-        // Check budgets
-        checkBudgetsForDate(userRef, dashboardTimestamp, allNotifications, () -> {
-            budgetsChecked[0] = true;
-            if (circlesChecked[0]) {
-                updateNotifications(allNotifications);
-            }
+            // Check for no expenses in last 3 days
+            checkNoExpensesAlert(userRef, dashboardTimestamp, allNotifications, () -> {
+                checksComplete[0] = true;
+                if (allChecksComplete(checksComplete)) {
+                    updateNotifications(allNotifications);
+                }
+            });
+
+            // Check for budgets at 90%
+            checkBudget90PercentAlert(userRef, dashboardTimestamp, allNotifications, () -> {
+                checksComplete[1] = true;
+                if (allChecksComplete(checksComplete)) {
+                    updateNotifications(allNotifications);
+                }
+            });
         });
+    }
 
-        // Check saving circles
-        checkSavingCirclesForDate(userRef, dashboardTimestamp, allNotifications, () -> {
-            circlesChecked[0] = true;
-            if (budgetsChecked[0]) {
-                updateNotifications(allNotifications);
+    private boolean allChecksComplete(boolean[] checks) {
+        for (boolean check : checks) {
+            if (!check) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Dismiss a specific notification and save to Firebase
+     */
+    public void dismissNotification(NotificationItem item) {
+        dismissedNotificationIds.add(item.getId());
+
+        // Save to Firebase
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser != null) {
+            String uid = currentUser.getUid();
+            database.getReference("users").child(uid)
+                    .child("dismissedNotifications")
+                    .child(item.getId())
+                    .setValue(System.currentTimeMillis())
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Notification dismissed and saved: " + item.getId());
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Failed to save dismissed notification", e);
+                    });
+        }
+
+        List<NotificationItem> current = pendingNotifications.getValue();
+        if (current != null) {
+            List<NotificationItem> updated = new ArrayList<>();
+            for (NotificationItem notification : current) {
+                if (!notification.getId().equals(item.getId())) {
+                    updated.add(notification);
+                }
+            }
+            pendingNotifications.setValue(updated);
+            hasNotifications.setValue(!updated.isEmpty());
+        }
+    }
+
+    /**
+     * Clear all notifications for the current session
+     */
+    public void clearAllNotifications() {
+        FirebaseUser currentUser = auth.getCurrentUser();
+        List<NotificationItem> current = pendingNotifications.getValue();
+
+        if (current != null && currentUser != null) {
+            String uid = currentUser.getUid();
+            DatabaseReference dismissedRef = database.getReference("users")
+                    .child(uid)
+                    .child("dismissedNotifications");
+
+            for (NotificationItem item : current) {
+                dismissedNotificationIds.add(item.getId());
+                dismissedRef.child(item.getId()).setValue(System.currentTimeMillis());
+            }
+        }
+
+        pendingNotifications.setValue(new ArrayList<>());
+        hasNotifications.setValue(false);
+    }
+
+    /**
+     * Load dismissed notifications from Firebase
+     */
+    private void loadDismissedNotifications(DatabaseReference userRef, Runnable onComplete) {
+        userRef.child("dismissedNotifications").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                dismissedNotificationIds.clear();
+
+                for (DataSnapshot dismissedSnapshot : snapshot.getChildren()) {
+                    String notificationId = dismissedSnapshot.getKey();
+                    if (notificationId != null) {
+                        dismissedNotificationIds.add(notificationId);
+                        Log.d(TAG, "Loaded dismissed notification: " + notificationId);
+                    }
+                }
+
+                Log.d(TAG, "Loaded " + dismissedNotificationIds.size() + " dismissed notifications");
+                onComplete.run();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error loading dismissed notifications", error.toException());
+                onComplete.run();
             }
         });
     }
 
-    private void checkBudgetsForDate(DatabaseReference userRef, long dashboardTimestamp,
-                                     List<NotificationItem> notifications, Runnable onComplete) {
-        Log.d(TAG, "=== Checking Budgets ===");
+    /**
+     * Reset the session - useful when user logs out or app restarts
+     */
+    public void resetSession() {
+        shownNotificationIds.clear();
+        dismissedNotificationIds.clear();
+        pendingNotifications.setValue(new ArrayList<>());
+        hasNotifications.setValue(false);
+    }
+
+    /**
+     * Check if user hasn't logged any expenses in the last 3 days
+     */
+    private void checkNoExpensesAlert(DatabaseReference userRef, long dashboardTimestamp,
+                                      List<NotificationItem> notifications, Runnable onComplete) {
+        Log.d(TAG, "=== Checking No Expenses Alert ===");
+
+        userRef.child("expenses").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                long threeDaysAgo = dashboardTimestamp - (NO_EXPENSE_DAYS * 24 * 60 * 60 * 1000);
+                boolean hasRecentExpense = false;
+                long mostRecentExpenseDate = 0;
+
+                for (DataSnapshot expenseSnapshot : snapshot.getChildren()) {
+                    String dateStr = expenseSnapshot.child("date").getValue(String.class);
+                    if (dateStr != null) {
+                        try {
+                            Date expenseDate = dateFormat.parse(dateStr);
+                            if (expenseDate != null) {
+                                long expenseTime = expenseDate.getTime();
+
+                                // Track most recent expense
+                                if (expenseTime > mostRecentExpenseDate) {
+                                    mostRecentExpenseDate = expenseTime;
+                                }
+
+                                // Check if expense is within last 3 days
+                                if (expenseTime >= threeDaysAgo && expenseTime <= dashboardTimestamp) {
+                                    hasRecentExpense = true;
+                                    break;
+                                }
+                            }
+                        } catch (ParseException e) {
+                            Log.e(TAG, "Error parsing expense date", e);
+                        }
+                    }
+                }
+
+                if (!hasRecentExpense && snapshot.getChildrenCount() > 0) {
+                    long daysSinceLastExpense = (dashboardTimestamp - mostRecentExpenseDate) / (1000 * 60 * 60 * 24);
+
+                    NotificationItem item = new NotificationItem(
+                            NotificationItem.Type.NO_EXPENSES,
+                            "no_expenses_" + dashboardTimestamp,
+                            "No Recent Expenses",
+                            "Last expense was " + daysSinceLastExpense + " days ago",
+                            0,
+                            dashboardTimestamp
+                    );
+                    synchronized (notifications) {
+                        notifications.add(item);
+                    }
+                    Log.d(TAG, "✓✓✓ NOTIFICATION ADDED: No expenses in " + daysSinceLastExpense + " days");
+                } else {
+                    Log.d(TAG, "✗ Recent expenses found or no expenses in database");
+                }
+
+                onComplete.run();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error checking expenses", error.toException());
+                onComplete.run();
+            }
+        });
+    }
+
+    /**
+     * Check if any budget has reached 90% of its limit
+     */
+    private void checkBudget90PercentAlert(DatabaseReference userRef, long dashboardTimestamp,
+                                           List<NotificationItem> notifications, Runnable onComplete) {
+        Log.d(TAG, "=== Checking Budget 90% Alert ===");
+
         Calendar dashboardCal = Calendar.getInstance();
         dashboardCal.setTimeInMillis(dashboardTimestamp);
-        Log.d(TAG, "Dashboard date: " + dateFormat.format(dashboardCal.getTime()));
 
         userRef.child("budgets").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                Log.d(TAG, "Found " + snapshot.getChildrenCount() + " budgets");
+                long budgetCount = snapshot.getChildrenCount();
+
+                if (budgetCount == 0) {
+                    Log.d(TAG, "No budgets found");
+                    onComplete.run();
+                    return;
+                }
+
+                // Counter to track completed budget checks
+                final int[] completedChecks = {0};
+                final int[] activeBudgets = {0};
 
                 for (DataSnapshot budgetSnapshot : snapshot.getChildren()) {
                     try {
-                        // Log all fields to see what's actually in the database
-                        Log.d(TAG, "Budget fields:");
-                        for (DataSnapshot field : budgetSnapshot.getChildren()) {
-                            Log.d(TAG, "  " + field.getKey() + " = " + field.getValue());
-                        }
-
                         String name = budgetSnapshot.child("name").getValue(String.class);
                         String dateStr = budgetSnapshot.child("date").getValue(String.class);
+                        Double amount = budgetSnapshot.child("amount").getValue(Double.class);
 
-                        // TRY BOTH "frequency" and "freq" field names
                         String frequency = budgetSnapshot.child("frequency").getValue(String.class);
                         if (frequency == null) {
                             frequency = budgetSnapshot.child("freq").getValue(String.class);
                         }
 
-                        String categoryName = budgetSnapshot.child("category").getValue(String.class);
-
-                        Log.d(TAG, "Checking budget: " + name + " [" + frequency + "] started " + dateStr);
-
-                        if (name == null || dateStr == null || frequency == null) {
-                            Log.w(TAG, "  Skipping - missing fields (name=" + name + ", date=" + dateStr + ", frequency=" + frequency + ")");
+                        if (name == null || dateStr == null || frequency == null || amount == null) {
                             continue;
                         }
 
                         Date startDate = dateFormat.parse(dateStr);
-                        if (startDate == null) {
-                            Log.w(TAG, "  Could not parse date: " + dateStr);
-                            continue;
-                        }
+                        if (startDate == null) continue;
 
-                        // Find which cycle the dashboard date falls into
+                        // Find current cycle
                         Calendar cycleStart = Calendar.getInstance();
                         cycleStart.setTime(startDate);
-
                         Calendar cycleEnd = (Calendar) cycleStart.clone();
-
-                        // Find the active cycle
-                        boolean foundActiveCycle = false;
-                        int cycleNumber = 0;
 
                         while (cycleEnd.getTimeInMillis() <= dashboardTimestamp) {
                             cycleStart = (Calendar) cycleEnd.clone();
@@ -144,187 +322,121 @@ public class NotificationViewModel extends ViewModel {
                                 cycleEnd.add(Calendar.DAY_OF_YEAR, 7);
                             } else if ("Monthly".equalsIgnoreCase(frequency)) {
                                 cycleEnd.add(Calendar.MONTH, 1);
-                            } else {
-                                Log.w(TAG, "  Unknown frequency: " + frequency);
-                                break;
-                            }
-                            cycleNumber++;
-
-                            if (cycleNumber > 1000) { // Safety check
-                                Log.w(TAG, "  Too many cycles, breaking");
-                                break;
                             }
                         }
 
-                        // Check if dashboard date is within this cycle
+                        // Check if in active cycle
                         if (dashboardTimestamp >= cycleStart.getTimeInMillis() &&
                                 dashboardTimestamp <= cycleEnd.getTimeInMillis()) {
-                            foundActiveCycle = true;
 
-                            long endTime = cycleEnd.getTimeInMillis();
-                            long daysUntilEnd = (endTime - dashboardTimestamp) / (1000 * 60 * 60 * 24);
-
-                            Log.d(TAG, "  Active cycle found:");
-                            Log.d(TAG, "    Cycle start: " + dateFormat.format(cycleStart.getTime()));
-                            Log.d(TAG, "    Cycle end: " + dateFormat.format(cycleEnd.getTime()));
-                            Log.d(TAG, "    Days until end: " + daysUntilEnd);
-
-                            // Add notification if ending within WARNING_DAYS
-                            if (daysUntilEnd >= 0 && daysUntilEnd <= WARNING_DAYS) {
-                                NotificationItem item = new NotificationItem(
-                                        NotificationItem.Type.BUDGET,
-                                        name,
-                                        categoryName != null ? categoryName : "Budget",
-                                        (int) daysUntilEnd,
-                                        endTime
-                                );
-                                synchronized (notifications) {
-                                    notifications.add(item);
-                                }
-                                Log.d(TAG, "  ✓✓✓ NOTIFICATION ADDED: " + name + " ends in " + daysUntilEnd + " days");
-                            } else {
-                                Log.d(TAG, "  ✗ Not within warning window (daysUntilEnd=" + daysUntilEnd + ", WARNING_DAYS=" + WARNING_DAYS + ")");
-                            }
-                        } else {
-                            Log.d(TAG, "  ✗ Dashboard date not in active cycle");
+                            activeBudgets[0]++;
+                            // Calculate total expenses for this budget in current cycle
+                            String category = budgetSnapshot.child("category").getValue(String.class);
+                            checkExpensesForBudget(userRef, category, cycleStart.getTimeInMillis(),
+                                    cycleEnd.getTimeInMillis(), amount, name, notifications, () -> {
+                                        completedChecks[0]++;
+                                        Log.d(TAG, "Completed budget check " + completedChecks[0] + " of " + activeBudgets[0]);
+                                        if (completedChecks[0] >= activeBudgets[0]) {
+                                            onComplete.run();
+                                        }
+                                    });
                         }
 
                     } catch (ParseException e) {
-                        Log.e(TAG, "  Error parsing date", e);
+                        Log.e(TAG, "Error parsing budget date", e);
                     }
                 }
 
-                Log.d(TAG, "=== Budget check complete. Notifications found: " + notifications.size() + " ===");
-                onComplete.run();
+                // If no active budgets were found, complete immediately
+                if (activeBudgets[0] == 0) {
+                    Log.d(TAG, "No active budgets in current cycle");
+                    onComplete.run();
+                }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Log.e(TAG, "Error checking budgets", error.toException());
+                Log.e(TAG, "Error checking budgets for 90%", error.toException());
                 onComplete.run();
             }
         });
     }
 
-    private void checkSavingCirclesForDate(DatabaseReference userRef, long dashboardTimestamp,
-                                           List<NotificationItem> notifications, Runnable onComplete) {
-        FirebaseUser currentUser = auth.getCurrentUser();
-        if (currentUser == null) {
-            onComplete.run();
-            return;
-        }
-
-        String userEmail = currentUser.getEmail();
-
-        Log.d(TAG, "=== Checking Saving Circles ===");
-        Log.d(TAG, "Dashboard timestamp: " + dashboardTimestamp + " (" + new Date(dashboardTimestamp) + ")");
-
-        userRef.child("savingCircles").addListenerForSingleValueEvent(new ValueEventListener() {
+    private void checkExpensesForBudget(DatabaseReference userRef, String category,
+                                        long cycleStart, long cycleEnd, double budgetAmount,
+                                        String budgetName, List<NotificationItem> notifications,
+                                        Runnable onComplete) {
+        userRef.child("expenses").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                Log.d(TAG, "Found " + snapshot.getChildrenCount() + " saving circles");
+                double totalSpent = 0.0;
 
-                for (DataSnapshot circleSnapshot : snapshot.getChildren()) {
-                    try {
-                        String groupName = circleSnapshot.child("groupName").getValue(String.class);
-                        String frequency = circleSnapshot.child("frequency").getValue(String.class);
+                for (DataSnapshot expenseSnapshot : snapshot.getChildren()) {
+                    String expenseCategory = expenseSnapshot.child("category").getValue(String.class);
+                    String dateStr = expenseSnapshot.child("date").getValue(String.class);
+                    Double expenseAmount = expenseSnapshot.child("amount").getValue(Double.class);
 
-                        Log.d(TAG, "Checking circle: " + groupName + " [" + frequency + "]");
-
-                        if (groupName == null || frequency == null) {
-                            Log.w(TAG, "  Skipping - missing fields");
-                            continue;
-                        }
-
-                        // Check if current user is a member
-                        DataSnapshot membersSnapshot = circleSnapshot.child("members");
-                        String sanitizedEmail = sanitizeEmail(userEmail);
-
-                        if (!membersSnapshot.hasChild(sanitizedEmail)) {
-                            Log.d(TAG, "  User is not a member");
-                            continue;
-                        }
-
-                        DataSnapshot memberSnapshot = membersSnapshot.child(sanitizedEmail);
-                        Double allocation = memberSnapshot.child("personalAllocation").getValue(Double.class);
-
-                        if (allocation == null) {
-                            Log.w(TAG, "  No allocation found");
-                            continue;
-                        }
-
-                        Log.d(TAG, "  User allocation: $" + allocation);
-
-                        // Get current cycle relative to dashboard date
-                        DataSnapshot cyclesSnapshot = memberSnapshot.child("cycles");
-                        Log.d(TAG, "  Found " + cyclesSnapshot.getChildrenCount() + " cycles");
-
-                        for (DataSnapshot cycleSnapshot : cyclesSnapshot.getChildren()) {
-                            Long startDate = cycleSnapshot.child("startDate").getValue(Long.class);
-                            Long endDate = cycleSnapshot.child("endDate").getValue(Long.class);
-                            Double endAmount = cycleSnapshot.child("endAmount").getValue(Double.class);
-                            Boolean isComplete = cycleSnapshot.child("complete").getValue(Boolean.class);
-
-                            if (startDate == null || endDate == null || endAmount == null) {
-                                Log.w(TAG, "    Cycle missing required fields");
-                                continue;
-                            }
-
-                            if (isComplete != null && isComplete) {
-                                Log.d(TAG, "    Cycle already complete");
-                                continue;
-                            }
-
-                            Log.d(TAG, "    Cycle: " + new Date(startDate) + " to " + new Date(endDate));
-
-                            // Check if this cycle is active on the dashboard date
-                            if (dashboardTimestamp >= startDate && dashboardTimestamp <= endDate) {
-                                long daysUntilEnd = (endDate - dashboardTimestamp) / (1000 * 60 * 60 * 24);
-
-                                Log.d(TAG, "    Active cycle found! Days until end: " + daysUntilEnd);
-
-                                // Add notification if ending within WARNING_DAYS
-                                if (daysUntilEnd >= 0 && daysUntilEnd <= WARNING_DAYS) {
-                                    double remaining = allocation - endAmount;
-                                    NotificationItem item = new NotificationItem(
-                                            NotificationItem.Type.SAVING_CIRCLE,
-                                            groupName,
-                                            "Remaining: $" + String.format("%.2f", remaining),
-                                            (int) daysUntilEnd,
-                                            endDate
-                                    );
-                                    synchronized (notifications) {
-                                        notifications.add(item);
-                                    }
-                                    Log.d(TAG, "    ✓✓✓ NOTIFICATION ADDED: " + groupName + " ends in " + daysUntilEnd + " days");
-                                } else {
-                                    Log.d(TAG, "    ✗ Not within warning window (daysUntilEnd=" + daysUntilEnd + ", WARNING_DAYS=" + WARNING_DAYS + ")");
+                    if (category != null && category.equals(expenseCategory) && dateStr != null && expenseAmount != null) {
+                        try {
+                            Date expenseDate = dateFormat.parse(dateStr);
+                            if (expenseDate != null) {
+                                long expenseTime = expenseDate.getTime();
+                                if (expenseTime >= cycleStart && expenseTime <= cycleEnd) {
+                                    totalSpent += expenseAmount;
                                 }
-                                break; // Found active cycle
                             }
+                        } catch (ParseException e) {
+                            Log.e(TAG, "Error parsing expense date", e);
                         }
-
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error checking saving circle", e);
                     }
                 }
 
-                Log.d(TAG, "=== Saving circles check complete. Notifications found: " + notifications.size() + " ===");
+                double percentageUsed = (totalSpent / budgetAmount) * 100;
+
+                Log.d(TAG, "Budget: " + budgetName + ", Spent: $" + totalSpent + " / $" + budgetAmount + " = " + percentageUsed + "%");
+
+                if (percentageUsed >= (BUDGET_WARNING_THRESHOLD * 100)) {
+                    NotificationItem item = new NotificationItem(
+                            NotificationItem.Type.BUDGET_90_PERCENT,
+                            "budget_90_" + budgetName + "_" + cycleStart,
+                            budgetName + " at " + String.format("%.0f", percentageUsed) + "%",
+                            String.format("Spent $%.2f of $%.2f", totalSpent, budgetAmount),
+                            0,
+                            cycleEnd
+                    );
+                    synchronized (notifications) {
+                        notifications.add(item);
+                    }
+                    Log.d(TAG, "✓✓✓ NOTIFICATION ADDED: " + budgetName + " at " + percentageUsed + "%");
+                } else {
+                    Log.d(TAG, "✗ Budget under 90% threshold");
+                }
+
                 onComplete.run();
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Log.e(TAG, "Error checking saving circles", error.toException());
+                Log.e(TAG, "Error checking expenses for budget", error.toException());
                 onComplete.run();
             }
         });
     }
 
     private void updateNotifications(List<NotificationItem> notifications) {
-        pendingNotifications.setValue(notifications);
-        hasNotifications.setValue(!notifications.isEmpty());
-        Log.d(TAG, "Updated notifications: " + notifications.size() + " items");
+        // Filter out already shown or dismissed notifications
+        List<NotificationItem> newNotifications = new ArrayList<>();
+        for (NotificationItem item : notifications) {
+            if (!shownNotificationIds.contains(item.getId()) &&
+                    !dismissedNotificationIds.contains(item.getId())) {
+                newNotifications.add(item);
+                shownNotificationIds.add(item.getId());
+            }
+        }
+
+        pendingNotifications.setValue(newNotifications);
+        hasNotifications.setValue(!newNotifications.isEmpty());
+        Log.d(TAG, "Updated notifications: " + newNotifications.size() + " new items (filtered from " + notifications.size() + " total)");
     }
 
     private String sanitizeEmail(String email) {
@@ -345,23 +457,29 @@ public class NotificationViewModel extends ViewModel {
      */
     public static class NotificationItem {
         public enum Type {
-            BUDGET,
-            SAVING_CIRCLE
+            NO_EXPENSES,
+            BUDGET_90_PERCENT
         }
 
+        private String id;
         private Type type;
         private String title;
         private String subtitle;
         private int daysRemaining;
         private long endDate;
 
-        public NotificationItem(Type type, String title, String subtitle,
+        public NotificationItem(Type type, String id, String title, String subtitle,
                                 int daysRemaining, long endDate) {
             this.type = type;
+            this.id = id;
             this.title = title;
             this.subtitle = subtitle;
             this.daysRemaining = daysRemaining;
             this.endDate = endDate;
+        }
+
+        public String getId() {
+            return id;
         }
 
         public Type getType() {
@@ -385,13 +503,12 @@ public class NotificationViewModel extends ViewModel {
         }
 
         public String getTimeMessage() {
-            if (daysRemaining == 0) {
-                return "Ends today!";
-            } else if (daysRemaining == 1) {
-                return "Ends tomorrow";
-            } else {
-                return "Ends in " + daysRemaining + " days";
+            if (type == Type.NO_EXPENSES) {
+                return "Track your spending!";
+            } else if (type == Type.BUDGET_90_PERCENT) {
+                return "Budget limit approaching";
             }
+            return "";
         }
     }
 }
