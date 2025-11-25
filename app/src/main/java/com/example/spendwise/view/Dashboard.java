@@ -143,22 +143,18 @@ public class Dashboard extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
 
-        // Populate notifications
-        LinearLayout notificationsContainer = dialogView.findViewById(R.id.notifications_container);
-        notificationsContainer.removeAllViews();
-
-        for (NotificationViewModel.NotificationItem item : notifications) {
-            View itemView = getLayoutInflater().inflate(R.layout.item_notification_dialog, notificationsContainer, false);
-            bindNotificationItem(itemView, item);
-            notificationsContainer.addView(itemView);
-        }
+        // Setup RecyclerView with your existing adapter
+        RecyclerView notificationsRecycler = dialogView.findViewById(R.id.notifications_recycler);
+        notificationsRecycler.setLayoutManager(new LinearLayoutManager(this));
+        NotificationAdapter adapter = new NotificationAdapter();
+        adapter.setNotifications(notifications);
+        notificationsRecycler.setAdapter(adapter);
 
         // Setup buttons
         View btnDismiss = dialogView.findViewById(R.id.btn_dismiss);
         View btnViewBudgets = dialogView.findViewById(R.id.btn_view_budgets);
 
         btnDismiss.setOnClickListener(v -> {
-            // Just dismiss, don't save preference
             isNotificationDialogShowing = false;
             dialog.dismiss();
         });
@@ -179,35 +175,6 @@ public class Dashboard extends AppCompatActivity {
         Log.d("Dashboard", "Dialog shown successfully");
     }
 
-    private void bindNotificationItem(View itemView, NotificationViewModel.NotificationItem item) {
-        ImageView iconView = itemView.findViewById(R.id.notification_icon);
-        TextView titleText = itemView.findViewById(R.id.notification_title);
-        TextView subtitleText = itemView.findViewById(R.id.notification_subtitle);
-        TextView timeText = itemView.findViewById(R.id.notification_time);
-        View urgencyIndicator = itemView.findViewById(R.id.urgency_indicator);
-
-        titleText.setText(item.getTitle());
-        subtitleText.setText(item.getSubtitle());
-        timeText.setText(item.getTimeMessage());
-
-        // Set icon based on type
-        if (item.getType() == NotificationViewModel.NotificationItem.Type.BUDGET) {
-            iconView.setImageResource(R.drawable.ic_budget);
-        } else {
-            iconView.setImageResource(R.drawable.ic_savings);
-        }
-
-        // Set urgency color based on days remaining
-        int urgencyColor;
-        if (item.getDaysRemaining() == 0) {
-            urgencyColor = 0xFFFF3B30; // Red
-        } else if (item.getDaysRemaining() == 1) {
-            urgencyColor = 0xFFFF9500; // Orange
-        } else {
-            urgencyColor = 0xFFFFCC00; // Yellow
-        }
-        urgencyIndicator.setBackgroundColor(urgencyColor);
-    }
     private void setupPieChart() {
         pieChart.setUsePercentValues(true);
         pieChart.getDescription().setEnabled(false);
