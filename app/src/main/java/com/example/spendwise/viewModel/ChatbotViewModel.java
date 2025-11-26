@@ -6,8 +6,16 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.spendwise.command.ChatCommand;
+import com.example.spendwise.command.WeeklySpendingCommand;
+import com.example.spendwise.command.CutCostsCommand;
+import com.example.spendwise.command.MonthlyComparisonCommand;
+import com.example.spendwise.command.BudgetQueryCommand;
+import com.example.spendwise.command.ExpenseQueryCommand;
+import com.example.spendwise.command.SavingCircleQueryCommand;
 import com.example.spendwise.model.ChatMessage;
 import com.example.spendwise.model.ChatSession;
+import com.example.spendwise.util.NotificationConstants;
 import com.example.spendwise.view.Network;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
@@ -15,6 +23,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -43,6 +52,21 @@ public class ChatbotViewModel extends ViewModel {
 
     private String currentSessionId = null;
     private boolean isNewSession = true;
+    
+    // Command Pattern: List of available commands
+    private final List<ChatCommand> commands;
+
+    public ChatbotViewModel() {
+        // Initialize Command Pattern commands
+        commands = Arrays.asList(
+            new WeeklySpendingCommand(),
+            new CutCostsCommand(),
+            new MonthlyComparisonCommand(),
+            new BudgetQueryCommand(),
+            new ExpenseQueryCommand(),
+            new SavingCircleQueryCommand()
+        );
+    }
 
     public interface PreviousChatsCallback {
         void onResult(List<ChatSession> previousSessions);
@@ -82,42 +106,19 @@ public class ChatbotViewModel extends ViewModel {
             isNewSession = false; // Mark that we've created a session
         }
 
-        // Check for custom commands
-        String lowerMessage = userMessage.toLowerCase();
-
-        // Explicit command keywords
-        if (lowerMessage.contains("spending this week") || lowerMessage.contains("spent this week")) {
-            computeWeeklySpending(userMessage);
-            return;
-        } else if (lowerMessage.contains("cut costs") || lowerMessage.contains("reduce spending")) {
-            suggestCostCutting(userMessage);
-            return;
-        } else if (lowerMessage.contains("compared to last month") || lowerMessage.contains("vs last month")) {
-            compareToLastMonth(userMessage);
-            return;
-        }
-
-        // Detect general finance questions that should use data
-        else if (lowerMessage.contains("how much") && (lowerMessage.contains("spend") || lowerMessage.contains("spent"))) {
-            // "how much did I spend this week/month/etc"
-            if (lowerMessage.contains("week")) {
-                computeWeeklySpending(userMessage);
-                return;
-            } else if (lowerMessage.contains("month")) {
-                computeMonthlySpending(userMessage);
+        // Command Pattern: Check if message matches any command
+        for (ChatCommand command : commands) {
+            if (command.matches(userMessage)) {
+                command.execute(this, userMessage);
                 return;
             }
-        } else if (lowerMessage.contains("my spending") || lowerMessage.contains("my expenses")) {
-            computeWeeklySpending(userMessage);
-            return;
-        } else if (lowerMessage.contains("my budget") || lowerMessage.contains("budget")) {
-            fetchBudgetsWithContext(userMessage);
-            return;
-        } else if (lowerMessage.contains("expense") || lowerMessage.contains("expenses")) {
-            fetchExpensesWithContext(userMessage);
-            return;
-        } else if (lowerMessage.contains("saving")) {
-            fetchSavingCircles();
+        }
+        
+        // Handle monthly spending separately (not covered by WeeklySpendingCommand)
+        String lowerMessage = userMessage.toLowerCase();
+        if (lowerMessage.contains("how much") && lowerMessage.contains("spend") && lowerMessage.contains("month") 
+                && !lowerMessage.contains("week")) {
+            computeMonthlySpending(userMessage);
             return;
         }
 
@@ -133,7 +134,7 @@ public class ChatbotViewModel extends ViewModel {
 
             @Override
             public void onError(String error) {
-                addMessage(new ChatMessage("ai", "😴 Llama is sleeping, knock later!"));
+                addMessage(new ChatMessage("ai", NotificationConstants.LLAMA_SLEEPING_MESSAGE));
                 statusMessage.postValue(error);
                 isLoading.postValue(false);
             }
@@ -268,7 +269,7 @@ public class ChatbotViewModel extends ViewModel {
     // ========== CUSTOM INSIGHT COMMANDS ==========
 
     /** Compute weekly spending with database data */
-    private void computeWeeklySpending(String originalMessage) {
+    public void computeWeeklySpending(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -362,7 +363,7 @@ public class ChatbotViewModel extends ViewModel {
     }
 
     /** Suggest cost-cutting areas */
-    private void suggestCostCutting(String originalMessage) {
+    public void suggestCostCutting(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -448,7 +449,7 @@ public class ChatbotViewModel extends ViewModel {
     }
 
     /** Compare to last month */
-    private void compareToLastMonth(String originalMessage) {
+    public void compareToLastMonth(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -554,7 +555,7 @@ public class ChatbotViewModel extends ViewModel {
 
             @Override
             public void onError(String error) {
-                addMessage(new ChatMessage("ai", "😴 AI is unavailable right now."));
+                addMessage(new ChatMessage("ai", NotificationConstants.LLAMA_NAPPING_MESSAGE));
                 isLoading.postValue(false);
             }
         });
@@ -563,7 +564,7 @@ public class ChatbotViewModel extends ViewModel {
     // ========== ORIGINAL FETCH METHODS ==========
 
     /** Fetch budgets and send to AI with context */
-    private void fetchBudgetsWithContext(String originalMessage) {
+    public void fetchBudgetsWithContext(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
         dbRef.child("users").child(currentUserId).child("budgets")
@@ -590,7 +591,7 @@ public class ChatbotViewModel extends ViewModel {
     }
 
     /** Fetch expenses and send to AI with context */
-    private void fetchExpensesWithContext(String originalMessage) {
+    public void fetchExpensesWithContext(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
         dbRef.child("users").child(currentUserId).child("expenses")
@@ -629,7 +630,7 @@ public class ChatbotViewModel extends ViewModel {
     }
 
     /** Compute monthly spending */
-    private void computeMonthlySpending(String originalMessage) {
+    public void computeMonthlySpending(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -770,7 +771,7 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    private void fetchSavingCircles() {
+    public void fetchSavingCircles() {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
         dbRef.child("users").child(currentUserId).child("savingCircles")
