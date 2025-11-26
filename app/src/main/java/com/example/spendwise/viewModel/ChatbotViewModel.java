@@ -31,16 +31,33 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * ViewModel for managing AI chatbot interactions and chat session persistence.
+ * Implements MVVM architecture with Command Pattern for extensible commands.
+ * Handles AI message processing, session management, and context-aware financial insights.
+ */
 public class ChatbotViewModel extends ViewModel {
 
+    /** LiveData for chat messages list - observed by UI for real-time updates */
     private final MutableLiveData<List<ChatMessage>> messages = new MutableLiveData<>(new ArrayList<>());
+    
+    /** LiveData for loading state - indicates when AI is processing a request */
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
+    
+    /** LiveData for status messages - used for error notifications */
     private final MutableLiveData<String> statusMessage = new MutableLiveData<>("");
 
+    /** Network instance for making API calls to Ollama */
     private final Network network = new Network();
+    
+    /** Firebase database reference for chat session persistence */
     private final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
 
-    // Get current user ID dynamically from Firebase Auth
+    /**
+     * Retrieves the current authenticated user's ID from Firebase Auth.
+     * 
+     * @return The user's unique ID if authenticated, otherwise a fallback ID for testing
+     */
     private String getCurrentUserId() {
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
@@ -50,12 +67,22 @@ public class ChatbotViewModel extends ViewModel {
         return "hlGiIdCw3vWSJP0kI0nZdhY26Kl2";
     }
 
+    /** Current active chat session ID - null when starting a new session */
     private String currentSessionId = null;
+    
+    /** Flag indicating if this is a new chat session */
     private boolean isNewSession = true;
     
-    // Command Pattern: List of available commands
+    /** Command Pattern: List of available chatbot commands for extensible command handling */
     private final List<ChatCommand> commands;
+    
+    /** Flag to track if title generation is in progress for current session */
+    private boolean isGeneratingTitle = false;
 
+    /**
+     * Constructor initializes the Command Pattern command list.
+     * Sets up all available chatbot commands for handling user queries.
+     */
     public ChatbotViewModel() {
         // Initialize Command Pattern commands
         commands = Arrays.asList(
@@ -68,23 +95,52 @@ public class ChatbotViewModel extends ViewModel {
         );
     }
 
+    /**
+     * Callback interface for retrieving previous chat sessions asynchronously.
+     */
     public interface PreviousChatsCallback {
+        /**
+         * Called when previous chat sessions are retrieved from Firebase.
+         * 
+         * @param previousSessions List of previous chat sessions, ordered by timestamp
+         */
         void onResult(List<ChatSession> previousSessions);
     }
 
+    /**
+     * Gets the LiveData stream of chat messages for UI observation.
+     * 
+     * @return LiveData containing the list of chat messages
+     */
     public LiveData<List<ChatMessage>> getMessages() {
         return messages;
     }
 
+    /**
+     * Gets the LiveData stream for loading state.
+     * 
+     * @return LiveData indicating if AI is currently processing a request
+     */
     public LiveData<Boolean> getIsLoading() {
         return isLoading;
     }
 
+    /**
+     * Gets the LiveData stream for status messages (errors, notifications).
+     * 
+     * @return LiveData containing status message strings
+     */
     public LiveData<String> getStatusMessage() {
         return statusMessage;
     }
 
-    /** Sends a message - creates new session if needed */
+    /**
+     * Sends a user message to the chatbot and processes the response.
+     * Handles session creation, Command Pattern matching, and AI API calls.
+     * 
+     * @param userMessage The user's message to send
+     * @param previousSessionId Optional session ID to continue previous conversation
+     */
     public void sendMessage(String userMessage, String previousSessionId) {
         if (userMessage.trim().isEmpty()) return;
 
@@ -141,7 +197,11 @@ public class ChatbotViewModel extends ViewModel {
         });
     }
 
-    /** Adds a message to LiveData list */
+    /**
+     * Adds a chat message to the current message list and notifies observers.
+     * 
+     * @param msg The chat message to add (user or AI message)
+     */
     private void addMessage(ChatMessage msg) {
         List<ChatMessage> current = messages.getValue();
         if (current == null) current = new ArrayList<>();
@@ -149,7 +209,81 @@ public class ChatbotViewModel extends ViewModel {
         messages.postValue(current);
     }
 
-    /** Update existing session or save new one */
+    /**
+     * Generates a chat title using AI API based on the first user message.
+     * 
+     * <p>This method calls the Ollama API to generate a concise, descriptive title
+     * (max 5 words) for the chat session based on the user's first message.
+     * Falls back to a truncated first message if AI generation fails.
+     * 
+     * @param firstUserMessage The first user message in the session
+     * @param callback Callback to receive the generated title
+     */
+    private void generateChatTitle(String firstUserMessage, TitleGenerationCallback callback) {
+        String prompt = "Generate a short, descriptive title (maximum 5 words) for this conversation: \"" 
+                + firstUserMessage + "\". Return only the title, nothing else.";
+        
+        network.chat(prompt, new Network.Callback() {
+            @Override
+            public void onSuccess(String aiTitle) {
+                // Clean up the title - remove quotes, extra whitespace
+                String cleanTitle = aiTitle.trim()
+                        .replaceAll("^[\"']|[\"']$", "") // Remove surrounding quotes
+                        .replaceAll("\\s+", " ") // Normalize whitespace
+                        .trim();
+                
+                // Ensure max 50 characters
+                if (cleanTitle.length() > 50) {
+                    cleanTitle = cleanTitle.substring(0, 47) + "...";
+                }
+                
+                // Fallback if title is empty or too short
+                if (cleanTitle.isEmpty() || cleanTitle.length() < 3) {
+                    cleanTitle = firstUserMessage.length() > 50 
+                            ? firstUserMessage.substring(0, 47) + "..." 
+                            : firstUserMessage;
+                }
+                
+                callback.onTitleGenerated(cleanTitle);
+            }
+
+            @Override
+            public void onError(String error) {
+                // Fallback to truncated first message if AI fails
+                Log.w("ChatbotViewModel", "AI title generation failed, using fallback: " + error);
+                String fallbackTitle = firstUserMessage.length() > 50 
+                        ? firstUserMessage.substring(0, 47) + "..." 
+                        : firstUserMessage;
+                callback.onTitleGenerated(fallbackTitle);
+            }
+        });
+    }
+
+    /**
+     * Callback interface for AI title generation.
+     */
+    private interface TitleGenerationCallback {
+        /**
+         * Called when title generation completes (successfully or with fallback).
+         * 
+         * @param title The generated or fallback title
+         */
+        void onTitleGenerated(String title);
+    }
+
+    /**
+     * Updates an existing chat session or saves a new one to Firebase.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Generates an AI-powered title for new sessions</li>
+     *   <li>Creates a summary from the AI's last reply</li>
+     *   <li>Persists all messages and session metadata to Firebase</li>
+     * </ul>
+     * 
+     * @param userMessage The user's message that triggered this save
+     * @param aiReply The AI's response to save
+     */
     private void updateOrSaveSession(String userMessage, String aiReply) {
         if (currentSessionId == null) return;
 
@@ -157,20 +291,48 @@ public class ChatbotViewModel extends ViewModel {
         List<ChatMessage> allMessages = messages.getValue();
         if (allMessages == null || allMessages.isEmpty()) return;
 
-        // Generate title from FIRST user message in the session
-        String title = userMessage;
+        // Get first user message for title generation
+        String firstUserMessage = userMessage;
         for (ChatMessage msg : allMessages) {
             if ("user".equals(msg.getRole())) {
-                title = msg.getContent();
+                firstUserMessage = msg.getContent();
                 break;
             }
         }
 
-        title = title.length() > 50 ? title.substring(0, 47) + "..." : title;
-
         // Generate summary from LAST AI reply
         String summary = aiReply.length() > 80 ? aiReply.substring(0, 77) + "..." : aiReply;
 
+        // Check if this is the first AI reply (new session) - generate AI title
+        boolean isFirstAIResponse = allMessages.stream()
+                .filter(m -> "ai".equals(m.getRole()))
+                .count() == 1;
+
+        if (isFirstAIResponse && !isGeneratingTitle) {
+            // Generate AI title for new session
+            isGeneratingTitle = true;
+            generateChatTitle(firstUserMessage, title -> {
+                isGeneratingTitle = false;
+                saveSessionToFirebase(currentUserId, title, summary, allMessages);
+            });
+        } else {
+            // For continuing sessions, use existing title or generate fallback
+            String title = firstUserMessage.length() > 50 
+                    ? firstUserMessage.substring(0, 47) + "..." 
+                    : firstUserMessage;
+            saveSessionToFirebase(currentUserId, title, summary, allMessages);
+        }
+    }
+
+    /**
+     * Saves chat session data to Firebase database.
+     * 
+     * @param userId The current user's ID
+     * @param title The session title (AI-generated or fallback)
+     * @param summary The session summary from AI's last reply
+     * @param allMessages All messages in the session
+     */
+    private void saveSessionToFirebase(String userId, String title, String summary, List<ChatMessage> allMessages) {
         Map<String, Object> sessionData = new HashMap<>();
         sessionData.put("title", title);
         sessionData.put("summary", summary);
@@ -200,7 +362,14 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Get previous chat sessions from Firebase */
+    /**
+     * Retrieves all previous chat sessions for the current user from Firebase.
+     * 
+     * <p>Sessions are returned in reverse chronological order (newest first).
+     * Each session includes its title, summary, timestamp, and all messages.
+     * 
+     * @param callback Callback to receive the list of previous chat sessions
+     */
     public void getPreviousChats(PreviousChatsCallback callback) {
         String currentUserId = getCurrentUserId();
         Log.d("ChatbotViewModel", "Fetching previous chats for user: " + currentUserId);
@@ -250,7 +419,14 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Load a previous session into current chat */
+    /**
+     * Loads a previous chat session into the current chat view.
+     * 
+     * <p>This method restores all messages from the selected session and sets
+     * the current session ID to continue the conversation.
+     * 
+     * @param session The chat session to load
+     */
     public void loadSession(ChatSession session) {
         currentSessionId = session.getId();
         isNewSession = false; // We're continuing an existing session
@@ -258,7 +434,12 @@ public class ChatbotViewModel extends ViewModel {
         Log.d("ChatbotViewModel", "Loaded session: " + currentSessionId + " with " + session.getMessages().size() + " messages");
     }
 
-    /** Start a new chat session */
+    /**
+     * Starts a new chat session, clearing current messages and resetting session state.
+     * 
+     * <p>This method should be called when the user wants to begin a fresh conversation.
+     * The next message sent will create a new session in Firebase.
+     */
     public void startNewSession() {
         currentSessionId = null;
         isNewSession = true;
@@ -268,7 +449,12 @@ public class ChatbotViewModel extends ViewModel {
 
     // ========== CUSTOM INSIGHT COMMANDS ==========
 
-    /** Compute weekly spending with database data */
+    /**
+     * Computes and summarizes weekly spending (last 7 days) by category.
+     * Sends formatted data to AI for human-like summarization.
+     * 
+     * @param originalMessage The original user message that triggered this command
+     */
     public void computeWeeklySpending(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -362,7 +548,12 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Suggest cost-cutting areas */
+    /**
+     * Analyzes spending (last 30 days) and suggests cost reduction areas.
+     * Compares spending against budgets and sends analysis to AI for suggestions.
+     * 
+     * @param originalMessage The original user message that triggered this command
+     */
     public void suggestCostCutting(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -448,7 +639,12 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Compare to last month */
+    /**
+     * Compares current month spending to previous month by category.
+     * Calculates percentage changes and sends to AI for actionable insights.
+     * 
+     * @param originalMessage The original user message that triggered this command
+     */
     public void compareToLastMonth(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -543,7 +739,15 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Helper: Call AI with pre-computed data */
+    /**
+     * Helper method to call AI API with pre-computed data context.
+     * 
+     * <p>This method wraps the Network.chat() call and handles the response,
+     * adding the AI reply to messages and saving the session.
+     * 
+     * @param originalMessage The original user message for session tracking
+     * @param prompt The formatted prompt with data context to send to AI
+     */
     private void callAIWithData(String originalMessage, String prompt) {
         network.chat(prompt, new Network.Callback() {
             @Override
@@ -563,7 +767,14 @@ public class ChatbotViewModel extends ViewModel {
 
     // ========== ORIGINAL FETCH METHODS ==========
 
-    /** Fetch budgets and send to AI with context */
+    /**
+     * Fetches user budgets from Firebase and sends them to AI with context.
+     * 
+     * <p>The AI receives budget data formatted as a readable list and can answer
+     * questions about budgets using this context.
+     * 
+     * @param originalMessage The user's question about budgets
+     */
     public void fetchBudgetsWithContext(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -590,7 +801,14 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Fetch expenses and send to AI with context */
+    /**
+     * Fetches recent user expenses from Firebase and sends them to AI with context.
+     * 
+     * <p>Limits to the 20 most recent expenses to avoid overwhelming the AI context.
+     * The AI can answer questions about expenses using this data.
+     * 
+     * @param originalMessage The user's question about expenses
+     */
     public void fetchExpensesWithContext(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -629,7 +847,18 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Compute monthly spending */
+    /**
+     * Computes and summarizes monthly spending using database data.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Fetches expenses from the current month (starting from day 1)</li>
+     *   <li>Calculates totals by category</li>
+     *   <li>Sends formatted data to AI for human-like summarization</li>
+     * </ul>
+     * 
+     * @param originalMessage The original user message that triggered this command
+     */
     public void computeMonthlySpending(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -698,6 +927,12 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
+    /**
+     * Fetches budgets from Firebase and displays them directly (without AI processing).
+     * 
+     * <p>This is a legacy method that formats budgets as a simple text list.
+     * Consider using fetchBudgetsWithContext() for AI-enhanced responses.
+     */
     private void fetchBudgets() {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -722,6 +957,13 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
+    /**
+     * Fetches recent expenses from Firebase and displays them directly (without AI processing).
+     * 
+     * <p>This is a legacy method that formats expenses as a simple text list.
+     * Limits to 10 most recent expenses. Consider using fetchExpensesWithContext() 
+     * for AI-enhanced responses.
+     */
     private void fetchExpenses() {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -771,6 +1013,12 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
+    /**
+     * Fetches saving circles from Firebase and displays them directly.
+     * 
+     * <p>This method retrieves all saving circles for the current user and
+     * formats them as a simple text list showing name and total amount.
+     */
     public void fetchSavingCircles() {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
