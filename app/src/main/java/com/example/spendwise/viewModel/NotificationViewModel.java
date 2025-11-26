@@ -109,6 +109,8 @@ public class NotificationViewModel extends ViewModel {
 
     /**
      * Dismiss a specific notification and save to Firebase
+     * 
+     * @param item The notification item to dismiss
      */
     public void dismissNotification(NotificationItem item) {
         dismissedNotificationIds.add(item.getId());
@@ -144,6 +146,8 @@ public class NotificationViewModel extends ViewModel {
 
     /**
      * Clear all notifications for the current session
+     * Marks all current notifications as dismissed in Firebase and clears
+     * the local pending notifications list.
      */
     public void clearAllNotifications() {
         FirebaseUser currentUser = auth.getCurrentUser();
@@ -196,6 +200,7 @@ public class NotificationViewModel extends ViewModel {
 
     /**
      * Reset the session - useful when user logs out or app restarts
+     * Clears all session-specific tracking data to ensure a fresh state.
      */
     public void resetSession() {
         shownNotificationIds.clear();
@@ -206,6 +211,14 @@ public class NotificationViewModel extends ViewModel {
 
     /**
      * Check if user hasn't logged any expenses in the last 3 days
+     * 
+     * @param userRef Firebase reference to user's data
+     * @param dashboardTimestamp Current dashboard timestamp for date comparison
+     * @param notifications List to add notification to if condition is met
+     * @param onComplete Callback to execute when check is finished
+     * 
+     * Scans user's expenses to determine if any were logged within the last
+     * 3 days. If no recent expenses are found, creates a notification alert.
      */
     private void checkNoExpensesAlert(DatabaseReference userRef, long dashboardTimestamp,
                                       List<NotificationItem> notifications, Runnable onComplete) {
@@ -275,6 +288,14 @@ public class NotificationViewModel extends ViewModel {
 
     /**
      * Check if any budget has reached 90% of its limit
+     * 
+     * @param userRef Firebase reference to user's data
+     * @param dashboardTimestamp Current dashboard timestamp for cycle calculation
+     * @param notifications List to add notifications to for budgets at threshold
+     * @param onComplete Callback to execute when all budget checks are finished
+     * 
+     * Iterates through all active budgets and calculates spending for the current
+     * cycle. Creates notifications for budgets that have reached 90% of their limit.
      */
     private void checkBudget90PercentAlert(DatabaseReference userRef, long dashboardTimestamp,
                                            List<NotificationItem> notifications, Runnable onComplete) {
@@ -487,6 +508,15 @@ public class NotificationViewModel extends ViewModel {
         processNotificationQueue();
     }
 
+    /**
+     * Sanitize email address for use in Firebase paths
+     * 
+     * @param email The email address to sanitize
+     * @return Sanitized email with dots and @ symbols replaced for Firebase compatibility
+     * 
+     * Firebase keys cannot contain certain characters like dots and @ symbols.
+     * This method converts them to safe alternatives for use in database paths.
+     */
     private String sanitizeEmail(String email) {
         if (email == null) return "";
         return email.replace(".", "_").replace("@", "_at_");
