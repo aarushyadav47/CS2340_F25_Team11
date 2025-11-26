@@ -41,6 +41,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
+import java.util.LinkedList;
+import java.util.Set;
+import java.util.HashSet;
+import com.example.spendwise.logic.BudgetAlertLogic;
 
 public class Dashboard extends AppCompatActivity {
 
@@ -58,6 +63,9 @@ public class Dashboard extends AppCompatActivity {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
     private final SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     private SharedPreferences preferences;
+    private Queue<String> alertQueue = new LinkedList<>();
+    private Set<String> alertedBudgets = new HashSet<>();
+    private BudgetAlertLogic budgetAlertLogic = new BudgetAlertLogic();
 
     private static final String PREFS_NAME = "SpendWisePrefs";
     private static final String KEY_SIMULATED_DATE = "simulated_date";
@@ -690,8 +698,84 @@ public class Dashboard extends AppCompatActivity {
                     monthlyBudgetText.setTextColor(getResources()
                             .getColor(android.R.color.black));
                 }
+
+                // Prepare maps for alert checking
+                Map<String, Double> weeklySpentMap = new HashMap<>();
+                Map<String, Double> monthlySpentMap = new HashMap<>();
+
+                 // Re-calculating per-category spent for alerts
+                 for (Expense expense : expenses) {
+                    try {
+                        Date expenseDate = shortDateFormat.parse(expense.getDate());
+                        if (expenseDate == null) continue;
+                        String categoryName = expense.getCategory().getDisplayName();
+
+                        if (isInCurrentWeek(expenseDate)) {
+                            weeklySpentMap.put(categoryName, weeklySpentMap.getOrDefault(categoryName, 0.0) + expense.getAmount());
+                        }
+                        if (isInCurrentMonth(expenseDate)) {
+                            monthlySpentMap.put(categoryName, monthlySpentMap.getOrDefault(categoryName, 0.0) + expense.getAmount());
+                        }
+                    } catch (ParseException e) { e.printStackTrace(); }
+                }
+
+                checkBudgetAlerts(weeklyBudgets, monthlyBudgets, weeklySpentMap, monthlySpentMap);
             });
         });
+    }
+
+    private void checkBudgetAlerts(Map<String, Double> weeklyBudgets, Map<String, Double> monthlyBudgets,
+                                   Map<String, Double> weeklySpent, Map<String, Double> monthlySpent) {
+        
+        // Check Weekly Budgets
+        for (Map.Entry<String, Double> entry : weeklyBudgets.entrySet()) {
+            String category = entry.getKey();
+            double limit = entry.getValue();
+            double spent = weeklySpent.getOrDefault(category, 0.0);
+            String budgetKey = "Weekly-" + category;
+
+            if (!alertedBudgets.contains(budgetKey)) {
+                if (budgetAlertLogic.isExceeded(spent, limit)) {
+                    alertQueue.add(budgetAlertLogic.getExceededMessage(category + " (Weekly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                } else if (budgetAlertLogic.isNearLimit(spent, limit, 0.85)) { // 85% threshold
+                    alertQueue.add(budgetAlertLogic.getNearLimitMessage(category + " (Weekly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                }
+            }
+        }
+
+        // Check Monthly Budgets
+        for (Map.Entry<String, Double> entry : monthlyBudgets.entrySet()) {
+            String category = entry.getKey();
+            double limit = entry.getValue();
+            double spent = monthlySpent.getOrDefault(category, 0.0);
+            String budgetKey = "Monthly-" + category;
+
+            if (!alertedBudgets.contains(budgetKey)) {
+                if (budgetAlertLogic.isExceeded(spent, limit)) {
+                    alertQueue.add(budgetAlertLogic.getExceededMessage(category + " (Monthly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                } else if (budgetAlertLogic.isNearLimit(spent, limit, 0.85)) {
+                    alertQueue.add(budgetAlertLogic.getNearLimitMessage(category + " (Monthly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                }
+            }
+        }
+
+        processAlertQueue();
+    }
+
+    private void processAlertQueue() {
+        if (alertQueue.isEmpty()) return;
+
+        String message = alertQueue.poll();
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Budget Alert")
+                .setMessage(message)
+                .setPositiveButton("OK", (dialog, which) -> processAlertQueue())
+                .setCancelable(false)
+                .show();
     }
 
     private void displayBudgetSummary(List<Budget> budgets) {
