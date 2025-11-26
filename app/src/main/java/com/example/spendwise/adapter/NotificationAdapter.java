@@ -18,6 +18,17 @@ import java.util.List;
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {
 
     private List<NotificationItem> notifications = new ArrayList<>();
+    private OnItemClickListener clickListener;
+
+    // Interface for click listener
+    public interface OnItemClickListener {
+        void onItemClick(NotificationItem item);
+    }
+
+    // Method to set the click listener
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.clickListener = listener;
+    }
 
     @NonNull
     @Override
@@ -31,6 +42,13 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     public void onBindViewHolder(@NonNull NotificationViewHolder holder, int position) {
         NotificationItem item = notifications.get(position);
         holder.bind(item);
+
+        // Set click listener on the entire item view
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onItemClick(item);
+            }
+        });
     }
 
     @Override

@@ -364,7 +364,6 @@ public class ExpenseLog extends AppCompatActivity {
 
     private void setupNavBar(String dashboardDate) {
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
-        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
 
         dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
         findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
@@ -382,7 +381,12 @@ public class ExpenseLog extends AppCompatActivity {
             savingIntent.putExtra("selected_date", dashboardDate);
             startActivity(savingIntent);
         });
-        chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
+
+        findViewById(R.id.chatbot_navigate).setOnClickListener(v -> {
+            Intent chatbotIntent = new Intent(this, Chatbot.class);
+            chatbotIntent.putExtra("selected_date", dashboardDate);
+            startActivity(chatbotIntent);
+        });
     }
 
     private void setupSwipeToDelete(RecyclerView recyclerView, ExpenseAdapter adapter) {

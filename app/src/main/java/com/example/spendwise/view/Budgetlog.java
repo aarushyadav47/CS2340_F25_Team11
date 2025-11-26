@@ -116,10 +116,16 @@ public class Budgetlog extends AppCompatActivity {
             budgetIntent.putExtra("selected_date", dashboardDate);
             startActivity(budgetIntent);
         });
-        findViewById(R.id.savingCircle_navigate).setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircleLog.class)));
-        findViewById(R.id.chatbot_navigate).setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class)));
+        findViewById(R.id.savingCircle_navigate).setOnClickListener(v -> {
+            Intent savingIntent = new Intent(this, SavingCircleLog.class);
+            savingIntent.putExtra("selected_date", dashboardDate);
+            startActivity(savingIntent);
+        });
+        findViewById(R.id.chatbot_navigate).setOnClickListener(v -> {
+            Intent chatbotIntent = new Intent(this, Chatbot.class);
+            chatbotIntent.putExtra("selected_date", dashboardDate);
+            startActivity(chatbotIntent);
+        });
 
         // Add Budget button
         View budgetLogForm = findViewById(R.id.form_Container);

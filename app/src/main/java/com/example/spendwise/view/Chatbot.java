@@ -23,6 +23,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -107,7 +108,7 @@ public class Chatbot extends AppCompatActivity {
             showPreviousChatSelectionDialog(message);
         });
 
-        setupNavigation();
+        setupNavBar(dashboardDate);
     }
 
     /** Setup quick command buttons */
@@ -296,42 +297,57 @@ public class Chatbot extends AppCompatActivity {
     }
 
     /** Bottom navigation setup */
-    private void setupNavigation() {
+    private void setupNavBar(String dashboardDate) {
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
-        View expenseLogNavigate = findViewById(R.id.expenseLog_navigate);
-        View budgetNavigate = findViewById(R.id.budget_navigate);
-        View savingCircleNavigate = findViewById(R.id.savingCircle_navigate);
-        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
 
-        dashboardNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, Dashboard.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
+        dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
+        findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
+            Intent expenseIntent = new Intent(this, ExpenseLog.class);
+            expenseIntent.putExtra("selected_date", dashboardDate);
+            startActivity(expenseIntent);
+        });
+        findViewById(R.id.budget_navigate).setOnClickListener(v -> {
+            Intent budgetIntent = new Intent(this, Budgetlog.class);
+            budgetIntent.putExtra("selected_date", dashboardDate);
+            startActivity(budgetIntent);
+        });
+        findViewById(R.id.savingCircle_navigate).setOnClickListener(v -> {
+            Intent savingIntent = new Intent(this, SavingCircleLog.class);
+            savingIntent.putExtra("selected_date", dashboardDate);
+            startActivity(savingIntent);
         });
 
-        expenseLogNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, ExpenseLog.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
+        findViewById(R.id.chatbot_navigate).setOnClickListener(v -> {
+            Intent chatbotIntent = new Intent(this, Chatbot.class);
+            chatbotIntent.putExtra("selected_date", dashboardDate);
+            startActivity(chatbotIntent);
         });
+    }
 
-        budgetNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, Budgetlog.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
-        });
+    /**
+     * Generates a random integer between min (inclusive) and max (inclusive).
+     *
+     * @param min The minimum value of the range (inclusive).
+     * @param max The maximum value of the range (inclusive).
+     * @return A random integer between min and max.
+     */
+    public static int generateRandomNumber(int min, int max) {
+        // Ensure that min is not greater than max
+        if (min > max) {
+            throw new IllegalArgumentException("Max must be greater than or equal to Min.");
+        }
 
-        savingCircleNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, SavingCircleLog.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
-        });
+        // 1. Create a new Random object
+        Random random = new Random();
 
-        chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class)));
+        // 2. Calculate the range (max - min + 1)
+        // The nextInt(n) method returns a random number from 0 (inclusive) to n (exclusive).
+        // To get a number up to 'max' (inclusive), we need a range of (max - min + 1).
+        int range = max - min + 1;
+
+        // 3. Generate the random number
+        // random.nextInt(range) gives a number from 0 to (range - 1).
+        // Adding 'min' shifts this range to be from 'min' to 'max'.
+        return random.nextInt(range) + min;
     }
 }

@@ -1,6 +1,7 @@
 package com.example.spendwise.view;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -40,6 +41,12 @@ public class Register extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         binding.setLifecycleOwner(this);
+
+        // Force status bar color (the purple bar at top)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(0xFF6200EE); // Purple
+            // Or use: getWindow().setStatusBarColor(Color.parseColor("#6200EE"));
+        }
 
         // Register user
         binding.registerButton.setOnClickListener(v -> {

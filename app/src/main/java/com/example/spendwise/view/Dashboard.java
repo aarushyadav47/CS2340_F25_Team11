@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,10 +23,12 @@ import com.example.spendwise.adapter.BudgetAdapter;
 import com.example.spendwise.databinding.DashboardBinding;
 import com.example.spendwise.model.Budget;
 import com.example.spendwise.model.Expense;
+import com.example.spendwise.util.ThemeHelper;
 import com.example.spendwise.viewModel.BudgetViewModel;
 import com.example.spendwise.viewModel.DashboardAnalyticsViewModel;
 import com.example.spendwise.viewModel.ExpenseViewModel;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.auth.FirebaseAuth;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.PieChart;
@@ -48,6 +51,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
+import java.util.LinkedList;
+import java.util.Set;
+import java.util.HashSet;
+import com.example.spendwise.logic.BudgetAlertLogic;
 
 public class Dashboard extends AppCompatActivity {
 
@@ -65,9 +73,13 @@ public class Dashboard extends AppCompatActivity {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
     private final SimpleDateFormat shortDateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     private SharedPreferences preferences;
+    private Queue<String> alertQueue = new LinkedList<>();
+    private Set<String> alertedBudgets = new HashSet<>();
+    private BudgetAlertLogic budgetAlertLogic = new BudgetAlertLogic();
 
     private static final String PREFS_NAME = "SpendWisePrefs";
     private static final String KEY_SIMULATED_DATE = "simulated_date";
+    private boolean hasCheckedMissedExpenses = false;
 
     private NotificationViewModel notificationViewModel;
     private NotificationAdapter notificationAdapter;
@@ -111,6 +123,9 @@ public class Dashboard extends AppCompatActivity {
         setupNotifications();
 
         loadDashboardData();
+        setupThemeToggle();
+
+        ThemeHelper.loadThemeFromFirebase(this);
     }
 
     private void setupNotifications() {
@@ -135,10 +150,30 @@ public class Dashboard extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
 
-        // Setup RecyclerView with your existing adapter
+        // Setup RecyclerView with click listener
         RecyclerView notificationsRecycler = dialogView.findViewById(R.id.notifications_recycler);
         notificationsRecycler.setLayoutManager(new LinearLayoutManager(this));
         NotificationAdapter adapter = new NotificationAdapter();
+
+        // Set item click listener to handle individual notification clicks
+        adapter.setOnItemClickListener(item -> {
+            isNotificationDialogShowing = false;
+            dialog.dismiss();
+
+            // Navigate based on notification type
+            if (item.getType() == NotificationViewModel.NotificationItem.Type.NO_EXPENSES) {
+                // Take user to expense log page
+                Intent intent = new Intent(Dashboard.this, ExpenseLog.class);
+                intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
+                startActivity(intent);
+            } else if (item.getType() == NotificationViewModel.NotificationItem.Type.BUDGET_90_PERCENT) {
+                // Take user to budget page
+                Intent intent = new Intent(Dashboard.this, Budgetlog.class);
+                intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
+                startActivity(intent);
+            }
+        });
+
         adapter.setNotifications(notifications);
         notificationsRecycler.setAdapter(adapter);
 
@@ -147,6 +182,9 @@ public class Dashboard extends AppCompatActivity {
         View btnViewBudgets = dialogView.findViewById(R.id.btn_view_budgets);
 
         btnDismiss.setOnClickListener(v -> {
+            // Dismiss all notifications
+            notificationViewModel.clearAllNotifications();
+            isNotificationDialogShowing = false;
             dialog.dismiss();
             // Notify ViewModel that this batch is dismissed so next can be shown
             notificationViewModel.onNotificationBatchDismissed();
@@ -168,6 +206,7 @@ public class Dashboard extends AppCompatActivity {
 
         dialog.show();
         Log.d("Dashboard", "Dialog shown successfully");
+        setupThemeToggle();
     }
 
     private void setupPieChart() {
@@ -359,8 +398,15 @@ public class Dashboard extends AppCompatActivity {
     }
 
     private void performLogout() {
+        // Note: We don't clear theme preference anymore
+        // It will remain in Firebase for when user logs back in
+
+        // Only clear other preferences
         SharedPreferences.Editor editor = preferences.edit();
+        String themeMode = String.valueOf(ThemeHelper.getThemeMode(this));
         editor.clear();
+        // Restore theme preference
+        editor.putInt("theme_mode", Integer.parseInt(themeMode));
         editor.apply();
 
         auth.signOut();
@@ -404,8 +450,12 @@ public class Dashboard extends AppCompatActivity {
             startActivity(intent);
         });
 
-        chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class)));
+        chatbotNavigate.setOnClickListener(v -> {
+            Intent intent = new Intent(Dashboard.this, Chatbot.class);
+            intent.putExtra("selected_date",
+                    shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
     }
 
     private void setupQuickActions() {
@@ -740,8 +790,84 @@ public class Dashboard extends AppCompatActivity {
                     monthlyBudgetText.setTextColor(getResources()
                             .getColor(android.R.color.black));
                 }
+
+                // Prepare maps for alert checking
+                Map<String, Double> weeklySpentMap = new HashMap<>();
+                Map<String, Double> monthlySpentMap = new HashMap<>();
+
+                 // Re-calculating per-category spent for alerts
+                 for (Expense expense : expenses) {
+                    try {
+                        Date expenseDate = shortDateFormat.parse(expense.getDate());
+                        if (expenseDate == null) continue;
+                        String categoryName = expense.getCategory().getDisplayName();
+
+                        if (isInCurrentWeek(expenseDate)) {
+                            weeklySpentMap.put(categoryName, weeklySpentMap.getOrDefault(categoryName, 0.0) + expense.getAmount());
+                        }
+                        if (isInCurrentMonth(expenseDate)) {
+                            monthlySpentMap.put(categoryName, monthlySpentMap.getOrDefault(categoryName, 0.0) + expense.getAmount());
+                        }
+                    } catch (ParseException e) { e.printStackTrace(); }
+                }
+
+                checkBudgetAlerts(weeklyBudgets, monthlyBudgets, weeklySpentMap, monthlySpentMap);
             });
         });
+    }
+
+    private void checkBudgetAlerts(Map<String, Double> weeklyBudgets, Map<String, Double> monthlyBudgets,
+                                   Map<String, Double> weeklySpent, Map<String, Double> monthlySpent) {
+        
+        // Check Weekly Budgets
+        for (Map.Entry<String, Double> entry : weeklyBudgets.entrySet()) {
+            String category = entry.getKey();
+            double limit = entry.getValue();
+            double spent = weeklySpent.getOrDefault(category, 0.0);
+            String budgetKey = "Weekly-" + category;
+
+            if (!alertedBudgets.contains(budgetKey)) {
+                if (budgetAlertLogic.isExceeded(spent, limit)) {
+                    alertQueue.add(budgetAlertLogic.getExceededMessage(category + " (Weekly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                } else if (budgetAlertLogic.isNearLimit(spent, limit, 0.85)) { // 85% threshold
+                    alertQueue.add(budgetAlertLogic.getNearLimitMessage(category + " (Weekly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                }
+            }
+        }
+
+        // Check Monthly Budgets
+        for (Map.Entry<String, Double> entry : monthlyBudgets.entrySet()) {
+            String category = entry.getKey();
+            double limit = entry.getValue();
+            double spent = monthlySpent.getOrDefault(category, 0.0);
+            String budgetKey = "Monthly-" + category;
+
+            if (!alertedBudgets.contains(budgetKey)) {
+                if (budgetAlertLogic.isExceeded(spent, limit)) {
+                    alertQueue.add(budgetAlertLogic.getExceededMessage(category + " (Monthly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                } else if (budgetAlertLogic.isNearLimit(spent, limit, 0.85)) {
+                    alertQueue.add(budgetAlertLogic.getNearLimitMessage(category + " (Monthly)", spent, limit));
+                    alertedBudgets.add(budgetKey);
+                }
+            }
+        }
+
+        processAlertQueue();
+    }
+
+    private void processAlertQueue() {
+        if (alertQueue.isEmpty()) return;
+
+        String message = alertQueue.poll();
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Budget Alert")
+                .setMessage(message)
+                .setPositiveButton("OK", (dialog, which) -> processAlertQueue())
+                .setCancelable(false)
+                .show();
     }
 
     private void displayBudgetSummary(List<Budget> budgets) {
@@ -834,5 +960,28 @@ public class Dashboard extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadDashboardData();
+    }
+
+    private void setupThemeToggle() {
+        SwitchMaterial themeSwitch = findViewById(R.id.theme_switch);
+        themeSwitch.setChecked(ThemeHelper.isDarkMode(this));
+
+        themeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                ThemeHelper.setTheme(this, ThemeHelper.DARK_MODE);
+            } else {
+                ThemeHelper.setTheme(this, ThemeHelper.LIGHT_MODE);
+            }
+            recreate(); // Restart activity to apply theme
+        });
+
+        // Optional: Sync theme changes from Firebase in real-time
+        ThemeHelper.syncThemeFromFirebase(this, newThemeMode -> {
+            // Theme changed from another device, recreate activity
+            runOnUiThread(() -> {
+                themeSwitch.setChecked(newThemeMode == ThemeHelper.DARK_MODE);
+                recreate();
+            });
+        });
     }
 }
