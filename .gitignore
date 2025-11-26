@@ -22,5 +22,19 @@ wrapper/dists/
 android/
 *.lock
 
+# Backup and temporary files
+*~
+*.bak
+*.tmp
+*.swp
+.LCK*
+*.java~
+
+# Sensitive files
+mapping.json
+
+# Temporary analysis files
+*_RUBRIC_ANALYSIS.md
+
 # Build outputs
 build/
