@@ -6,8 +6,16 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.spendwise.command.ChatCommand;
+import com.example.spendwise.command.WeeklySpendingCommand;
+import com.example.spendwise.command.CutCostsCommand;
+import com.example.spendwise.command.MonthlyComparisonCommand;
+import com.example.spendwise.command.BudgetQueryCommand;
+import com.example.spendwise.command.ExpenseQueryCommand;
+import com.example.spendwise.command.SavingCircleQueryCommand;
 import com.example.spendwise.model.ChatMessage;
 import com.example.spendwise.model.ChatSession;
+import com.example.spendwise.util.NotificationConstants;
 import com.example.spendwise.view.Network;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
@@ -15,6 +23,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,45 +31,72 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+
 public class ChatbotViewModel extends ViewModel {
 
+    /** LiveData for chat messages list - observed by UI for real-time updates */
     private final MutableLiveData<List<ChatMessage>> messages = new MutableLiveData<>(new ArrayList<>());
+    
+    /** LiveData for loading state - indicates when AI is processing a request */
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
+    
+    /** LiveData for status messages - used for error notifications */
     private final MutableLiveData<String> statusMessage = new MutableLiveData<>("");
 
+    /** Network instance for making API calls to Ollama */
     private final Network network = new Network();
+    
     private final DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference();
 
-    // Get current user ID dynamically from Firebase Auth
+ 
     private String getCurrentUserId() {
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             return user.getUid();
         }
-        // Fallback to hardcoded ID if no user is logged in
         return "hlGiIdCw3vWSJP0kI0nZdhY26Kl2";
     }
 
     private String currentSessionId = null;
+    
     private boolean isNewSession = true;
+    
+    private final List<ChatCommand> commands;
+    
+    private boolean isGeneratingTitle = false;
+
+    public ChatbotViewModel() {
+        commands = Arrays.asList(
+            new WeeklySpendingCommand(),
+            new CutCostsCommand(),
+            new MonthlyComparisonCommand(),
+            new BudgetQueryCommand(),
+            new ExpenseQueryCommand(),
+            new SavingCircleQueryCommand()
+        );
+    }
+
 
     public interface PreviousChatsCallback {
+  
         void onResult(List<ChatSession> previousSessions);
     }
 
+ 
     public LiveData<List<ChatMessage>> getMessages() {
         return messages;
     }
 
+  
     public LiveData<Boolean> getIsLoading() {
         return isLoading;
     }
+
 
     public LiveData<String> getStatusMessage() {
         return statusMessage;
     }
 
-    /** Sends a message - creates new session if needed */
     public void sendMessage(String userMessage, String previousSessionId) {
         if (userMessage.trim().isEmpty()) return;
 
@@ -82,42 +118,19 @@ public class ChatbotViewModel extends ViewModel {
             isNewSession = false; // Mark that we've created a session
         }
 
-        // Check for custom commands
-        String lowerMessage = userMessage.toLowerCase();
-
-        // Explicit command keywords
-        if (lowerMessage.contains("spending this week") || lowerMessage.contains("spent this week")) {
-            computeWeeklySpending(userMessage);
-            return;
-        } else if (lowerMessage.contains("cut costs") || lowerMessage.contains("reduce spending")) {
-            suggestCostCutting(userMessage);
-            return;
-        } else if (lowerMessage.contains("compared to last month") || lowerMessage.contains("vs last month")) {
-            compareToLastMonth(userMessage);
-            return;
-        }
-
-        // Detect general finance questions that should use data
-        else if (lowerMessage.contains("how much") && (lowerMessage.contains("spend") || lowerMessage.contains("spent"))) {
-            // "how much did I spend this week/month/etc"
-            if (lowerMessage.contains("week")) {
-                computeWeeklySpending(userMessage);
-                return;
-            } else if (lowerMessage.contains("month")) {
-                computeMonthlySpending(userMessage);
+        // Command Pattern: Check if message matches any command
+        for (ChatCommand command : commands) {
+            if (command.matches(userMessage)) {
+                command.execute(this, userMessage);
                 return;
             }
-        } else if (lowerMessage.contains("my spending") || lowerMessage.contains("my expenses")) {
-            computeWeeklySpending(userMessage);
-            return;
-        } else if (lowerMessage.contains("my budget") || lowerMessage.contains("budget")) {
-            fetchBudgetsWithContext(userMessage);
-            return;
-        } else if (lowerMessage.contains("expense") || lowerMessage.contains("expenses")) {
-            fetchExpensesWithContext(userMessage);
-            return;
-        } else if (lowerMessage.contains("saving")) {
-            fetchSavingCircles();
+        }
+        
+        // Handle monthly spending separately (not covered by WeeklySpendingCommand)
+        String lowerMessage = userMessage.toLowerCase();
+        if (lowerMessage.contains("how much") && lowerMessage.contains("spend") && lowerMessage.contains("month") 
+                && !lowerMessage.contains("week")) {
+            computeMonthlySpending(userMessage);
             return;
         }
 
@@ -133,14 +146,14 @@ public class ChatbotViewModel extends ViewModel {
 
             @Override
             public void onError(String error) {
-                addMessage(new ChatMessage("ai", "😴 Llama is sleeping, knock later!"));
+                addMessage(new ChatMessage("ai", NotificationConstants.LLAMA_SLEEPING_MESSAGE));
                 statusMessage.postValue(error);
                 isLoading.postValue(false);
             }
         });
     }
 
-    /** Adds a message to LiveData list */
+
     private void addMessage(ChatMessage msg) {
         List<ChatMessage> current = messages.getValue();
         if (current == null) current = new ArrayList<>();
@@ -148,7 +161,53 @@ public class ChatbotViewModel extends ViewModel {
         messages.postValue(current);
     }
 
-    /** Update existing session or save new one */
+
+    private void generateChatTitle(String firstUserMessage, TitleGenerationCallback callback) {
+        String prompt = "Generate a short, descriptive title (maximum 5 words) for this conversation: \"" 
+                + firstUserMessage + "\". Return only the title, nothing else.";
+        
+        network.chat(prompt, new Network.Callback() {
+            @Override
+            public void onSuccess(String aiTitle) {
+                // Clean up the title - remove quotes, extra whitespace
+                String cleanTitle = aiTitle.trim()
+                        .replaceAll("^[\"']|[\"']$", "") // Remove surrounding quotes
+                        .replaceAll("\\s+", " ") // Normalize whitespace
+                        .trim();
+                
+                // Ensure max 50 characters
+                if (cleanTitle.length() > 50) {
+                    cleanTitle = cleanTitle.substring(0, 47) + "...";
+                }
+                
+                // Fallback if title is empty or too short
+                if (cleanTitle.isEmpty() || cleanTitle.length() < 3) {
+                    cleanTitle = firstUserMessage.length() > 50 
+                            ? firstUserMessage.substring(0, 47) + "..." 
+                            : firstUserMessage;
+                }
+                
+                callback.onTitleGenerated(cleanTitle);
+            }
+
+            @Override
+            public void onError(String error) {
+                // Fallback to truncated first message if AI fails
+                Log.w("ChatbotViewModel", "AI title generation failed, using fallback: " + error);
+                String fallbackTitle = firstUserMessage.length() > 50 
+                        ? firstUserMessage.substring(0, 47) + "..." 
+                        : firstUserMessage;
+                callback.onTitleGenerated(fallbackTitle);
+            }
+        });
+    }
+
+ 
+    private interface TitleGenerationCallback {
+ 
+        void onTitleGenerated(String title);
+    }
+
     private void updateOrSaveSession(String userMessage, String aiReply) {
         if (currentSessionId == null) return;
 
@@ -156,20 +215,41 @@ public class ChatbotViewModel extends ViewModel {
         List<ChatMessage> allMessages = messages.getValue();
         if (allMessages == null || allMessages.isEmpty()) return;
 
-        // Generate title from FIRST user message in the session
-        String title = userMessage;
+        // Get first user message for title generation
+        String firstUserMessage = userMessage;
         for (ChatMessage msg : allMessages) {
             if ("user".equals(msg.getRole())) {
-                title = msg.getContent();
+                firstUserMessage = msg.getContent();
                 break;
             }
         }
 
-        title = title.length() > 50 ? title.substring(0, 47) + "..." : title;
-
         // Generate summary from LAST AI reply
         String summary = aiReply.length() > 80 ? aiReply.substring(0, 77) + "..." : aiReply;
 
+        // Check if this is the first AI reply (new session) - generate AI title
+        boolean isFirstAIResponse = allMessages.stream()
+                .filter(m -> "ai".equals(m.getRole()))
+                .count() == 1;
+
+        if (isFirstAIResponse && !isGeneratingTitle) {
+            // Generate AI title for new session
+            isGeneratingTitle = true;
+            generateChatTitle(firstUserMessage, title -> {
+                isGeneratingTitle = false;
+                saveSessionToFirebase(currentUserId, title, summary, allMessages);
+            });
+        } else {
+            // For continuing sessions, use existing title or generate fallback
+            String title = firstUserMessage.length() > 50 
+                    ? firstUserMessage.substring(0, 47) + "..." 
+                    : firstUserMessage;
+            saveSessionToFirebase(currentUserId, title, summary, allMessages);
+        }
+    }
+
+  
+    private void saveSessionToFirebase(String userId, String title, String summary, List<ChatMessage> allMessages) {
         Map<String, Object> sessionData = new HashMap<>();
         sessionData.put("title", title);
         sessionData.put("summary", summary);
@@ -199,7 +279,7 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Get previous chat sessions from Firebase */
+
     public void getPreviousChats(PreviousChatsCallback callback) {
         String currentUserId = getCurrentUserId();
         Log.d("ChatbotViewModel", "Fetching previous chats for user: " + currentUserId);
@@ -249,7 +329,7 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Load a previous session into current chat */
+
     public void loadSession(ChatSession session) {
         currentSessionId = session.getId();
         isNewSession = false; // We're continuing an existing session
@@ -257,7 +337,7 @@ public class ChatbotViewModel extends ViewModel {
         Log.d("ChatbotViewModel", "Loaded session: " + currentSessionId + " with " + session.getMessages().size() + " messages");
     }
 
-    /** Start a new chat session */
+ 
     public void startNewSession() {
         currentSessionId = null;
         isNewSession = true;
@@ -265,10 +345,7 @@ public class ChatbotViewModel extends ViewModel {
         Log.d("ChatbotViewModel", "Started new session");
     }
 
-    // ========== CUSTOM INSIGHT COMMANDS ==========
-
-    /** Compute weekly spending with database data */
-    private void computeWeeklySpending(String originalMessage) {
+    public void computeWeeklySpending(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -361,8 +438,8 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Suggest cost-cutting areas */
-    private void suggestCostCutting(String originalMessage) {
+
+    public void suggestCostCutting(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -447,8 +524,8 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Compare to last month */
-    private void compareToLastMonth(String originalMessage) {
+
+    public void compareToLastMonth(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -542,7 +619,7 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Helper: Call AI with pre-computed data */
+
     private void callAIWithData(String originalMessage, String prompt) {
         network.chat(prompt, new Network.Callback() {
             @Override
@@ -554,16 +631,13 @@ public class ChatbotViewModel extends ViewModel {
 
             @Override
             public void onError(String error) {
-                addMessage(new ChatMessage("ai", "😴 AI is unavailable right now."));
+                addMessage(new ChatMessage("ai", NotificationConstants.LLAMA_NAPPING_MESSAGE));
                 isLoading.postValue(false);
             }
         });
     }
 
-    // ========== ORIGINAL FETCH METHODS ==========
-
-    /** Fetch budgets and send to AI with context */
-    private void fetchBudgetsWithContext(String originalMessage) {
+    public void fetchBudgetsWithContext(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
         dbRef.child("users").child(currentUserId).child("budgets")
@@ -589,8 +663,8 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Fetch expenses and send to AI with context */
-    private void fetchExpensesWithContext(String originalMessage) {
+ 
+    public void fetchExpensesWithContext(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
         dbRef.child("users").child(currentUserId).child("expenses")
@@ -628,8 +702,8 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    /** Compute monthly spending */
-    private void computeMonthlySpending(String originalMessage) {
+ 
+    public void computeMonthlySpending(String originalMessage) {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
 
@@ -721,6 +795,13 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
+    /**
+     * Fetches recent expenses from Firebase and displays them directly (without AI processing).
+     * 
+     * <p>This is a legacy method that formats expenses as a simple text list.
+     * Limits to 10 most recent expenses. Consider using fetchExpensesWithContext() 
+     * for AI-enhanced responses.
+     */
     private void fetchExpenses() {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
@@ -770,7 +851,13 @@ public class ChatbotViewModel extends ViewModel {
                 });
     }
 
-    private void fetchSavingCircles() {
+    /**
+     * Fetches saving circles from Firebase and displays them directly.
+     * 
+     * <p>This method retrieves all saving circles for the current user and
+     * formats them as a simple text list showing name and total amount.
+     */
+    public void fetchSavingCircles() {
         isLoading.setValue(true);
         String currentUserId = getCurrentUserId();
         dbRef.child("users").child(currentUserId).child("savingCircles")
