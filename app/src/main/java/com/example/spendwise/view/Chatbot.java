@@ -23,6 +23,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -319,5 +320,32 @@ public class Chatbot extends AppCompatActivity {
             chatbotIntent.putExtra("selected_date", dashboardDate);
             startActivity(chatbotIntent);
         });
+    }
+
+    /**
+     * Generates a random integer between min (inclusive) and max (inclusive).
+     *
+     * @param min The minimum value of the range (inclusive).
+     * @param max The maximum value of the range (inclusive).
+     * @return A random integer between min and max.
+     */
+    public static int generateRandomNumber(int min, int max) {
+        // Ensure that min is not greater than max
+        if (min > max) {
+            throw new IllegalArgumentException("Max must be greater than or equal to Min.");
+        }
+
+        // 1. Create a new Random object
+        Random random = new Random();
+
+        // 2. Calculate the range (max - min + 1)
+        // The nextInt(n) method returns a random number from 0 (inclusive) to n (exclusive).
+        // To get a number up to 'max' (inclusive), we need a range of (max - min + 1).
+        int range = max - min + 1;
+
+        // 3. Generate the random number
+        // random.nextInt(range) gives a number from 0 to (range - 1).
+        // Adding 'min' shifts this range to be from 'min' to 'max'.
+        return random.nextInt(range) + min;
     }
 }
