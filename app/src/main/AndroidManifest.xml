@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:allowBackup="true"
@@ -39,6 +42,8 @@
         <activity android:name="com.example.spendwise.view.SavingCircleDetailActivity" />
         <activity android:name="com.example.spendwise.view.InvitationsActivity" />
         <activity android:name="com.example.spendwise.view.BudgetDetails" />
+        <activity android:name="com.example.spendwise.view.ProfileActivity" />
+        <activity android:name="com.example.spendwise.view.FriendsActivity" />
     </application>
 
 </manifest>
