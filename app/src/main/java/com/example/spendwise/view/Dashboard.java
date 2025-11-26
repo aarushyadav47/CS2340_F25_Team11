@@ -115,6 +115,7 @@ public class Dashboard extends AppCompatActivity {
 
         setupCalendarSelector();
         setupLogoutButton();
+        setupProfileButton();
         setupNavigation();
         setupQuickActions();
         setupBudgetCards();
@@ -410,6 +411,15 @@ public class Dashboard extends AppCompatActivity {
         finish();
 
         Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+    }
+
+    private void setupProfileButton() {
+        View profileButton = findViewById(R.id.profile_button);
+        if (profileButton != null) {
+            profileButton.setOnClickListener(v -> {
+                startActivity(new Intent(Dashboard.this, ProfileActivity.class));
+            });
+        }
     }
 
     private void setupNavigation() {
