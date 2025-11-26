@@ -19,6 +19,14 @@ import java.util.Calendar;
 import java.util.Locale;
 import android.app.DatePickerDialog;
 
+import com.example.spendwise.adapter.SavingCircleAdapter;
+import com.example.spendwise.model.SavingCircle;
+import com.example.spendwise.model.SavingCircleMember;
+import com.example.spendwise.model.MemberCycle;
+import com.example.spendwise.viewModel.SavingCircleViewModel;
+import java.util.HashMap;
+import java.util.Map;
+
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -49,6 +57,12 @@ public class Budgetlog extends AppCompatActivity {
     private Calendar calendar = Calendar.getInstance();
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy",
             Locale.US);
+
+    private SavingCircleViewModel savingCircleViewModel;
+    private SavingCircleAdapter savingCircleAdapter;
+    private int currentLoadId = 0;
+    private Map<String, Integer> circleLoadIds = new HashMap<>();
+    private long dashboardTimestamp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +95,9 @@ public class Budgetlog extends AppCompatActivity {
             }
         }
 
+        // Initialize SavingCircleViewModel
+        savingCircleViewModel = new ViewModelProvider(this).get(SavingCircleViewModel.class);
+
         setupDatePicker();
 
         // Setup bottom navigation
@@ -97,10 +114,16 @@ public class Budgetlog extends AppCompatActivity {
             budgetIntent.putExtra("selected_date", dashboardDate);
             startActivity(budgetIntent);
         });
-        findViewById(R.id.savingCircle_navigate).setOnClickListener(v ->
-                startActivity(new Intent(this, SavingCircleLog.class)));
-        findViewById(R.id.chatbot_navigate).setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class)));
+        findViewById(R.id.savingCircle_navigate).setOnClickListener(v -> {
+            Intent savingIntent = new Intent(this, SavingCircleLog.class);
+            savingIntent.putExtra("selected_date", dashboardDate);
+            startActivity(savingIntent);
+        });
+        findViewById(R.id.chatbot_navigate).setOnClickListener(v -> {
+            Intent chatbotIntent = new Intent(this, Chatbot.class);
+            chatbotIntent.putExtra("selected_date", dashboardDate);
+            startActivity(chatbotIntent);
+        });
 
         // Add Budget button
         View budgetLogForm = findViewById(R.id.form_Container);
@@ -112,6 +135,7 @@ public class Budgetlog extends AppCompatActivity {
             budgetLogForm.setVisibility(View.VISIBLE);
             budgetRecycler.setVisibility(View.GONE);
             budgetLogMsg.setVisibility(View.GONE);
+            findViewById(R.id.saving_circles_section).setVisibility(View.GONE);
         });
 
         // Floating Budget Calculator
@@ -138,6 +162,9 @@ public class Budgetlog extends AppCompatActivity {
 
         // Create Budget button
         findViewById(R.id.create_Budget).setOnClickListener(v -> saveBudget());
+
+        // Setup Saving Circles RecyclerView (NEW)
+        setupSavingCirclesRecyclerView();
     }
 
     private void setupDatePicker() {
@@ -259,6 +286,7 @@ public class Budgetlog extends AppCompatActivity {
                             findViewById(R.id.budget_recycler_view)
                                     .setVisibility(View.VISIBLE);
                             findViewById(R.id.budgetLog_msg).setVisibility(View.GONE);
+                            findViewById(R.id.saving_circles_section).setVisibility(View.VISIBLE);
 
                             clearForm();
                         }
@@ -389,5 +417,118 @@ public class Budgetlog extends AppCompatActivity {
         AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView)
                 .setNegativeButton("Close", (d, w) -> d.dismiss()).create();
         dialog.show();
+    }
+
+    // Add this new method to setup the saving circles RecyclerView
+    private void setupSavingCirclesRecyclerView() {
+        RecyclerView savingCirclesRecycler = findViewById(R.id.saving_circles_recycler_view);
+        savingCirclesRecycler.setLayoutManager(new LinearLayoutManager(this));
+
+        savingCircleAdapter = new SavingCircleAdapter();
+        savingCirclesRecycler.setAdapter(savingCircleAdapter);
+
+        final boolean[] isFirstLoad = {true};
+
+        savingCircleViewModel.getSavingCircles().observe(this, savingCircles -> {
+            savingCircleAdapter.setSavingCircles(savingCircles);
+
+            // Show/hide empty message
+            View emptyMsg = findViewById(R.id.saving_circles_empty_msg);
+            emptyMsg.setVisibility(savingCircles.isEmpty() ? View.VISIBLE : View.GONE);
+
+            // Calculate progress for all circles
+            if (!isFirstLoad[0]) {
+                currentLoadId++;
+            } else {
+                isFirstLoad[0] = false;
+            }
+
+            if (savingCircles != null && !savingCircles.isEmpty()) {
+                for (SavingCircle circle : savingCircles) {
+                    calculateCircleProgress(circle, currentLoadId);
+                }
+            }
+        });
+
+        // Optional: Add click listener to navigate to detail
+        savingCircleAdapter.setOnItemClickListener(savingCircle -> {
+            Intent detailIntent = new Intent(this, SavingCircleDetailActivity.class);
+            detailIntent.putExtra("CIRCLE_ID", savingCircle.getId());
+            detailIntent.putExtra("SELECTED_DATE", dashboardTimestamp);
+            startActivity(detailIntent);
+        });
+    }
+
+    // Add this method to calculate circle progress
+    private void calculateCircleProgress(SavingCircle circle, int loadId) {
+        String circleId = circle.getId();
+        circleLoadIds.put(circleId, loadId);
+
+        savingCircleViewModel.getSavingCircleMembersOnce(circleId, members -> {
+            Integer currentCircleLoadId = circleLoadIds.get(circleId);
+            if (currentCircleLoadId == null || currentCircleLoadId != loadId) {
+                return;
+            }
+
+            if (members == null || members.isEmpty()) {
+                savingCircleAdapter.setCircleProgress(circleId, 0, circle.getGoalAmount());
+                return;
+            }
+
+            final int[] membersProcessed = {0};
+            final double[] totalProgress = {0};
+            final int totalMembers = members.size();
+
+            for (SavingCircleMember member : members) {
+                if (member.getJoinedAt() > dashboardTimestamp) {
+                    synchronized (membersProcessed) {
+                        membersProcessed[0]++;
+                        if (membersProcessed[0] >= totalMembers) {
+                            savingCircleAdapter.setCircleProgress(circleId, totalProgress[0], circle.getGoalAmount());
+                        }
+                    }
+                    continue;
+                }
+
+                savingCircleViewModel.getMemberCycleHistoryOnce(circleId, member.getEmail(), cycles -> {
+                    Integer loadIdCheck = circleLoadIds.get(circleId);
+                    if (loadIdCheck == null || loadIdCheck != loadId) {
+                        return;
+                    }
+
+                    double memberContribution = 0;
+                    if (cycles != null && !cycles.isEmpty()) {
+                        for (MemberCycle cycle : cycles) {
+                            if (cycle.isComplete() && cycle.getEndDate() <= dashboardTimestamp) {
+                                memberContribution += cycle.getEndAmount();
+                            }
+                        }
+                    }
+
+                    synchronized (membersProcessed) {
+                        totalProgress[0] += memberContribution;
+                        membersProcessed[0]++;
+
+                        if (membersProcessed[0] >= totalMembers) {
+                            savingCircleAdapter.setCircleProgress(circleId, totalProgress[0], circle.getGoalAmount());
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Recalculate saving circles progress when returning to this page
+        currentLoadId++;
+        List<SavingCircle> currentCircles = savingCircleViewModel.getSavingCircles().getValue();
+        if (currentCircles != null && !currentCircles.isEmpty()) {
+            for (SavingCircle circle : currentCircles) {
+                calculateCircleProgress(circle, currentLoadId);
+            }
+        }
     }
 }

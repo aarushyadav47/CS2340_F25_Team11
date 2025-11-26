@@ -74,12 +74,24 @@
                     app:tint="#666666"/>
             </LinearLayout>
 
+            <!-- Theme Toggle Switch -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/theme_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:text="Dark"
+                android:textSize="12sp"
+                android:padding="8dp"
+                app:thumbTint="@color/white"
+                app:trackTint="#CCCCCC"/>
+
             <!-- Logout Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/logout_button"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:layout_marginStart="12dp"
                 android:text="Logout"
                 android:textSize="14sp"
                 android:textAllCaps="false"
@@ -98,15 +110,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:layout_marginStart="16dp"
             android:text="Dashboard"
             android:textColor="#000000"
             android:textSize="32sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/top_bar" />
 
-        <!-- Main Content Scroll -->
+        <!-- Main Content ScrollView -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/dashboard_scroll"
             android:layout_width="0dp"
@@ -114,7 +126,6 @@
             android:layout_marginTop="16dp"
             android:fillViewport="true"
             android:clipToPadding="false"
-            android:nestedScrollingEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/dashboard_title"
             app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
             app:layout_constraintStart_toStartOf="parent"
@@ -157,7 +168,7 @@
                             android:text="$0.00"
                             android:textSize="36sp"
                             android:textStyle="bold"
-                            android:textColor="#000000"/>
+                            android:textColor="?attr/colorOnSecondary"/>
 
                         <TextView
                             android:id="@+id/period_info"
@@ -185,8 +196,7 @@
                     android:textColor="@android:color/white"
                     app:icon="@drawable/ic_budget"
                     app:iconTint="@android:color/white"
-                    app:iconGravity="textStart"
-                    android:contentDescription="View remaining budgets button"/>
+                    app:iconGravity="textStart"/>
 
                 <!-- Remaining Budgets List (Initially Hidden) -->
                 <androidx.recyclerview.widget.RecyclerView
@@ -208,8 +218,6 @@
                     android:contentDescription="Spending by category heading"
                     android:labelFor="@+id/spending_pie_chart"
                     android:accessibilityHeading="true"
-                    android:contentDescription="Spending by category heading"
-                    android:labelFor="@+id/spending_pie_chart"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -222,9 +230,6 @@
                     android:focusable="true"
                     android:importantForAccessibility="yes"
                     android:layout_marginBottom="24dp"
-                    android:contentDescription="Spending by category chart"
-                    android:focusable="true"
-                    android:importantForAccessibility="yes"
                     android:background="@android:color/white"
                     android:padding="12dp"/>
 
@@ -237,8 +242,6 @@
                     android:contentDescription="Budget usage heading"
                     android:labelFor="@+id/budget_usage_bar_chart"
                     android:accessibilityHeading="true"
-                    android:contentDescription="Budget usage heading"
-                    android:labelFor="@+id/budget_usage_bar_chart"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -251,9 +254,6 @@
                     android:focusable="true"
                     android:importantForAccessibility="yes"
                     android:layout_marginBottom="24dp"
-                    android:contentDescription="Budget usage chart"
-                    android:focusable="true"
-                    android:importantForAccessibility="yes"
                     android:background="@android:color/white"
                     android:padding="12dp"/>
 
@@ -266,7 +266,6 @@
                     android:text="Budget Overview"
                     android:contentDescription="Budget overview heading"
                     android:accessibilityHeading="true"
-                    android:contentDescription="Budget overview heading"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#000000"/>
@@ -326,7 +325,7 @@
                                     android:text="$0.00"
                                     android:textSize="16sp"
                                     android:textStyle="bold"
-                                    android:textColor="#000000"/>
+                                    android:textColor="?attr/colorOnSecondary"/>
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
@@ -373,7 +372,7 @@
                                     android:text="$0.00"
                                     android:textSize="16sp"
                                     android:textStyle="bold"
-                                    android:textColor="#000000"/>
+                                    android:textColor="?attr/colorOnSecondary"/>
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
                     </LinearLayout>
@@ -595,40 +594,6 @@
                     app:tint="#888888"/>
             </LinearLayout>
         </LinearLayout>
-
-        <!-- Add these after your existing content -->
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Expense Breakdown"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp"/>
-
-        <com.github.mikephil.charting.charts.PieChart
-            android:id="@+id/pieChart"
-            android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:layout_marginBottom="24dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Budget Usage"
-                    android:contentDescription="Budget usage heading"
-                    android:labelFor="@+id/budget_usage_bar_chart"
-                    android:accessibilityHeading="true"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
-
-        <com.github.mikephil.charting.charts.BarChart
-            android:id="@+id/barChart"
-            android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:layout_marginBottom="24dp"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

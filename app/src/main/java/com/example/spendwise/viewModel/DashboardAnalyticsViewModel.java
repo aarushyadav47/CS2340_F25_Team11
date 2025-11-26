@@ -88,6 +88,9 @@ public class DashboardAnalyticsViewModel extends ViewModel {
             return;
         }
 
+        // Seed charts immediately to ensure they render even before Firebase data loads
+        seedFallbackCharts();
+
         String uid = currentUser.getUid();
         expensesRef = database.getReference("users").child(uid).child("expenses");
         budgetsRef = database.getReference("users").child(uid).child("budgets");

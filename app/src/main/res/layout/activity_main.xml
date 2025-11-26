@@ -16,7 +16,7 @@
         android:id="@+id/main"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#F5F5F7"
+        android:background="#FFFFFF"
         tools:context=".view.MainActivity">
 
         <!-- Wallet Icon (You'll need to add an actual drawable) -->

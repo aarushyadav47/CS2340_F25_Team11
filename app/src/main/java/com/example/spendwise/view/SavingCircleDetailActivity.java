@@ -17,8 +17,11 @@ import com.example.spendwise.model.MemberCycle;
 import com.example.spendwise.viewModel.SavingCircleViewModel;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 public class SavingCircleDetailActivity extends AppCompatActivity {
 
@@ -28,15 +31,17 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
     private String circleId;
     private long selectedDateTimestamp;
     private String frequency;
+    private double goalAmount = 0;
 
     // Helper for formatting currency
     private static final DecimalFormat CURRENCY_FORMAT = new DecimalFormat("#,##0.00");
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
 
-    // Track total progress for overall calculation
-    private double totalProgressAmount = 0;
-    private int membersProcessed = 0;
+    // Track members and their contributions
+    private Map<String, Double> memberContributions = new HashMap<>();
+    private Set<String> processedMembers = new HashSet<>();
     private int totalMembers = 0;
+    private int currentLoadId = 0; // To invalidate stale callbacks
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,9 +76,10 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                 binding.challengeTitle.setText(savingCircle.getChallengeTitle());
                 binding.frequency.setText(savingCircle.getFrequency());
                 frequency = savingCircle.getFrequency();
+                goalAmount = savingCircle.getGoalAmount();
 
                 binding.goalAmount.setText(
-                        String.format(Locale.US, "Goal: $%s", CURRENCY_FORMAT.format(savingCircle.getGoalAmount()))
+                        String.format(Locale.US, "Goal: $%s", CURRENCY_FORMAT.format(goalAmount))
                 );
 
                 binding.overallProgressText.setText("Overall Progress: Calculating...");
@@ -87,17 +93,26 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
             LinearLayout memberContainer = binding.memberContainer;
             memberContainer.removeAllViews();
 
+            // Increment load ID to invalidate any pending callbacks from previous loads
+            currentLoadId++;
+            final int thisLoadId = currentLoadId;
+
+            // Clear all tracking data structures
+            memberContributions.clear();
+            processedMembers.clear();
+            totalMembers = 0;
+
+            Log.d(TAG, "=== Starting new member load (ID: " + thisLoadId + ") ===");
+
             if (members == null || members.isEmpty()) {
                 TextView noMembers = new TextView(this);
                 noMembers.setText("No members in this circle yet.");
                 noMembers.setPadding(16, 16, 16, 16);
                 memberContainer.addView(noMembers);
-                updateOverallProgress(0, 0);
+                updateOverallProgress(0, goalAmount);
                 return;
             }
 
-            totalProgressAmount = 0;
-            membersProcessed = 0;
             totalMembers = members.size();
 
             for (SavingCircleMember member : members) {
@@ -106,6 +121,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                 TextView nameText = memberView.findViewById(R.id.member_name);
                 TextView currentAmountText = memberView.findViewById(R.id.member_current_amount);
                 TextView joinDateText = memberView.findViewById(R.id.member_join_date);
+                TextView cycleDatesText = memberView.findViewById(R.id.member_cycle_dates);
                 TextView historyText = memberView.findViewById(R.id.member_historical_contributions);
                 ProgressBar memberProgress = memberView.findViewById(R.id.member_progress_bar);
 
@@ -115,6 +131,7 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                 );
 
                 currentAmountText.setText("Loading...");
+                cycleDatesText.setText("Loading cycle dates...");
                 historyText.setText("Loading...");
                 memberProgress.setProgress(0);
 
@@ -122,234 +139,82 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
 
                 if (member.getJoinedAt() > selectedDateTimestamp) {
                     currentAmountText.setText("Not joined yet");
+                    cycleDatesText.setText("Not joined yet");
                     historyText.setText("--");
                     memberProgress.setProgress(0);
 
-                    synchronized (this) {
-                        membersProcessed++;
-                    }
-                    checkIfAllMembersProcessed();
+                    markMemberProcessed(member.getEmail(), 0, thisLoadId);
                     continue;
                 }
 
                 final double allocation = member.getPersonalAllocation();
 
+                // Trigger the check/completion/rollover logic for the current date
+                savingCircleViewModel.checkAndCreateNextCycle(circleId, member.getEmail(), frequency);
+
                 // Get or create the cycle for the selected date
                 getOrCreateCycleForDate(circleId, member.getEmail(), member.getJoinedAt(),
-                        allocation, currentAmountText, memberProgress, historyText);
+                        allocation, currentAmountText, cycleDatesText, memberProgress, historyText, thisLoadId);
             }
         });
     }
 
+
     /**
-     * Get existing cycle or create missing cycles up to the selected date
+     * Get existing cycle or trigger cycle creation logic in the ViewModel
+     * to ensure a cycle is active for the selected date.
      */
     private void getOrCreateCycleForDate(String circleId, String memberEmail, long joinDate,
                                          double allocation, TextView currentAmountText,
-                                         ProgressBar memberProgress, TextView historyText) {
-        savingCircleViewModel.getCycleAtDate(circleId, memberEmail, selectedDateTimestamp,
+                                         TextView cycleDatesText, ProgressBar memberProgress,
+                                         TextView historyText, int loadId) {
+
+        savingCircleViewModel.ensureCycleIsActiveForDate(
+                circleId, memberEmail, selectedDateTimestamp, frequency, allocation,
                 new SavingCircleViewModel.OnCycleLoadedListener() {
 
                     @Override
                     public void onCycleLoaded(MemberCycle cycle) {
-                        // Cycle exists, display it
-                        displayCycleData(cycle, allocation, currentAmountText, memberProgress);
-                        loadMemberHistoricalContributions(memberEmail, historyText);
+                        // Check if this callback is still valid
+                        if (loadId != currentLoadId) {
+                            Log.d(TAG, "Ignoring stale callback for " + memberEmail + " (loadId " + loadId + " vs current " + currentLoadId + ")");
+                            return;
+                        }
+
+                        displayCycleData(cycle, allocation, currentAmountText, cycleDatesText, memberProgress);
+                        loadMemberHistoricalContributions(memberEmail, historyText, loadId);
                     }
 
                     @Override
                     public void onCycleNotFound() {
-                        // No cycle found - need to create missing cycles
-                        createMissingCycles(circleId, memberEmail, joinDate, allocation,
-                                currentAmountText, memberProgress, historyText);
-                    }
+                        if (loadId != currentLoadId) return;
 
-                    @Override
-                    public void onError(String message) {
-                        Log.e(TAG, "Error: " + message);
-                        currentAmountText.setText("Error");
+                        Log.e(TAG, "Cycle logic failed to ensure an active cycle.");
+                        currentAmountText.setText("Cycle Error");
+                        cycleDatesText.setText("Cycle Error");
                         historyText.setText("Error");
-
-                        synchronized (SavingCircleDetailActivity.this) {
-                            membersProcessed++;
-                        }
-                        checkIfAllMembersProcessed();
-                    }
-                });
-    }
-
-    /**
-     * Create all missing cycles from the last existing cycle to the selected date
-     */
-    private void createMissingCycles(String circleId, String memberEmail, long joinDate,
-                                     double allocation, TextView currentAmountText,
-                                     ProgressBar memberProgress, TextView historyText) {
-        savingCircleViewModel.getMemberCycleHistory(circleId, memberEmail).observe(this, cycles -> {
-            if (cycles == null || cycles.isEmpty()) {
-                // No cycles at all
-                currentAmountText.setText("No cycles available");
-                historyText.setText("--");
-
-                synchronized (SavingCircleDetailActivity.this) {
-                    membersProcessed++;
-                }
-                checkIfAllMembersProcessed();
-                return;
-            }
-
-            // Find the last cycle
-            MemberCycle lastCycle = null;
-            for (MemberCycle cycle : cycles) {
-                if (lastCycle == null || cycle.getEndDate() > lastCycle.getEndDate()) {
-                    lastCycle = cycle;
-                }
-            }
-
-            if (lastCycle == null || selectedDateTimestamp < lastCycle.getStartDate()) {
-                // Selected date is before any cycles
-                currentAmountText.setText("No cycle for this date");
-                historyText.setText("--");
-
-                synchronized (SavingCircleDetailActivity.this) {
-                    membersProcessed++;
-                }
-                checkIfAllMembersProcessed();
-                return;
-            }
-
-            // If selected date is within existing cycles, we already checked - shouldn't be here
-            if (selectedDateTimestamp < lastCycle.getEndDate()) {
-                displayCycleData(lastCycle, allocation, currentAmountText, memberProgress);
-                loadMemberHistoricalContributions(memberEmail, historyText);
-                return;
-            }
-
-            // Create cycles from lastCycle to selectedDate
-            createCyclesUpToDate(circleId, memberEmail, lastCycle, allocation,
-                    currentAmountText, memberProgress, historyText);
-        });
-    }
-
-    /**
-     * Create cycles sequentially from the last cycle to cover the selected date
-     * Each new cycle starts with FRESH allocation (budget resets)
-     * IMPORTANT: Auto-created cycles should have $0 contribution (user wasn't active)
-     */
-    private void createCyclesUpToDate(String circleId, String memberEmail, MemberCycle lastCycle,
-                                      double allocation, TextView currentAmountText,
-                                      ProgressBar memberProgress, TextView historyText) {
-
-        // First, complete the last cycle if it should be complete
-        if (!lastCycle.isComplete() && lastCycle.getEndDate() <= selectedDateTimestamp) {
-            Log.d(TAG, "Completing cycle: " + lastCycle.getCycleId());
-            completeCycleInDatabase(circleId, memberEmail, lastCycle);
-        }
-
-        // Calculate next cycle dates
-        long nextStartDate = lastCycle.getEndDate();
-        long nextEndDate = calculateNextEndDate(nextStartDate, frequency);
-
-        // Create next cycle - but we need to determine if it's auto-created or real
-        MemberCycle nextCycle = new MemberCycle(nextStartDate, nextEndDate, allocation);
-
-        // Check if this new cycle should already be complete (if it's in the past)
-        boolean shouldBeComplete = nextCycle.getEndDate() <= selectedDateTimestamp;
-        if (shouldBeComplete) {
-            nextCycle.setComplete(true);
-            // CRITICAL FIX: Auto-created cycles have $0 contribution
-            // They represent periods where the user wasn't actively managing the circle
-            nextCycle.setStartAmount(0);
-            nextCycle.setEndAmount(0);
-            nextCycle.setSpent(0);
-            Log.d(TAG, "Creating auto-completed cycle (no contribution): " + nextCycle.getCycleId());
-        } else {
-            // This is the current/future cycle - starts with full allocation
-            nextCycle.setStartAmount(allocation);
-            nextCycle.setEndAmount(allocation);
-            Log.d(TAG, "Creating active cycle: " + nextCycle.getCycleId());
-        }
-
-        // Check if we need to create this cycle
-        if (selectedDateTimestamp >= nextCycle.getStartDate()) {
-            savingCircleViewModel.createCycle(circleId, memberEmail, nextCycle,
-                    new SavingCircleViewModel.OnCycleCreatedListener() {
-
-                        @Override
-                        public void onCycleCreated(MemberCycle cycle) {
-                            Log.d(TAG, "Cycle created: " + cycle.getCycleId() +
-                                    " (complete: " + cycle.isComplete() +
-                                    ", endAmount: " + cycle.getEndAmount() + ")");
-
-                            // Check if we need more cycles
-                            if (selectedDateTimestamp >= cycle.getEndDate()) {
-                                // Need to create more cycles
-                                createCyclesUpToDate(circleId, memberEmail, cycle, allocation,
-                                        currentAmountText, memberProgress, historyText);
-                            } else {
-                                // This cycle covers the selected date - display it
-                                displayCycleData(cycle, allocation, currentAmountText, memberProgress);
-                                loadMemberHistoricalContributions(memberEmail, historyText);
-                            }
-                        }
-
-                        @Override
-                        public void onError(String message) {
-                            Log.e(TAG, "Error creating cycle: " + message);
-                            currentAmountText.setText("Error creating cycle");
-
-                            synchronized (SavingCircleDetailActivity.this) {
-                                membersProcessed++;
-                            }
-                            checkIfAllMembersProcessed();
-                        }
-                    });
-        } else {
-            // Last cycle covers the selected date
-            displayCycleData(lastCycle, allocation, currentAmountText, memberProgress);
-            loadMemberHistoricalContributions(memberEmail, historyText);
-        }
-    }
-
-    /**
-     * Mark a cycle as complete in the database
-     */
-    private void completeCycleInDatabase(String circleId, String memberEmail, MemberCycle cycle) {
-        cycle.setComplete(true);
-        savingCircleViewModel.createCycle(circleId, memberEmail, cycle,
-                new SavingCircleViewModel.OnCycleCreatedListener() {
-                    @Override
-                    public void onCycleCreated(MemberCycle updatedCycle) {
-                        Log.d(TAG, "Cycle marked complete: " + updatedCycle.getCycleId());
+                        markMemberProcessed(memberEmail, 0, loadId);
                     }
 
                     @Override
                     public void onError(String message) {
-                        Log.e(TAG, "Error completing cycle: " + message);
+                        if (loadId != currentLoadId) return;
+
+                        Log.e(TAG, "Error in cycle logic: " + message);
+                        currentAmountText.setText("Error: " + message);
+                        cycleDatesText.setText("Error");
+                        historyText.setText("Error");
+                        markMemberProcessed(memberEmail, 0, loadId);
                     }
                 });
-    }
-
-    /**
-     * Calculate the end date for the next cycle based on frequency
-     */
-    private long calculateNextEndDate(long startDate, String frequency) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(startDate);
-
-        if ("Weekly".equals(frequency)) {
-            calendar.add(Calendar.WEEK_OF_YEAR, 1);
-        } else { // Monthly
-            calendar.add(Calendar.MONTH, 1);
-        }
-
-        return calendar.getTimeInMillis();
     }
 
     /**
      * Display cycle data in the UI
      */
     private void displayCycleData(MemberCycle cycle, double allocation,
-                                  TextView currentAmountText, ProgressBar memberProgress) {
+                                  TextView currentAmountText, TextView cycleDatesText,
+                                  ProgressBar memberProgress) {
         double leftover = cycle.getEndAmount();
 
         currentAmountText.setText(
@@ -358,19 +223,31 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                         CURRENCY_FORMAT.format(allocation))
         );
 
+        String cycleDates = String.format(Locale.US, "Cycle: %s - %s",
+                DATE_FORMAT.format(cycle.getStartDate()),
+                DATE_FORMAT.format(cycle.getEndDate()));
+        cycleDatesText.setText(cycleDates);
+
         int progress = allocation > 0 ? (int) ((leftover / allocation) * 100) : 0;
         memberProgress.setProgress(Math.min(progress, 100));
     }
 
     /**
-     * Load historical contributions from completed cycles
+     * Load historical contributions from completed cycles - ONE TIME READ
      */
-    private void loadMemberHistoricalContributions(String memberEmail, TextView historyText) {
-        savingCircleViewModel.getMemberCycleHistory(circleId, memberEmail).observe(this, cycles -> {
-            if (cycles != null && !cycles.isEmpty()) {
-                double historicalContribution = 0;
-                int completedCount = 0;
+    private void loadMemberHistoricalContributions(String memberEmail, TextView historyText, int loadId) {
 
+        savingCircleViewModel.getMemberCycleHistoryOnce(circleId, memberEmail, cycles -> {
+            // Check if this callback is still valid
+            if (loadId != currentLoadId) {
+                Log.d(TAG, "Ignoring stale history callback for " + memberEmail);
+                return;
+            }
+
+            double historicalContribution = 0;
+            int completedCount = 0;
+
+            if (cycles != null && !cycles.isEmpty()) {
                 for (MemberCycle cycle : cycles) {
                     // Only count COMPLETED cycles that ended on or before selected date
                     if (cycle.isComplete() && cycle.getEndDate() <= selectedDateTimestamp) {
@@ -378,41 +255,58 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
                         completedCount++;
                     }
                 }
-
-                synchronized (this) {
-                    totalProgressAmount += historicalContribution;
-                    membersProcessed++;
-                }
-
-                if (completedCount > 0) {
-                    historyText.setText(
-                            String.format(Locale.US, "Contributed: $%s (%d cycles)",
-                                    CURRENCY_FORMAT.format(historicalContribution),
-                                    completedCount)
-                    );
-                } else {
-                    historyText.setText("No completed cycles yet");
-                }
-
-                checkIfAllMembersProcessed();
-            } else {
-                historyText.setText("No history");
-
-                synchronized (this) {
-                    membersProcessed++;
-                }
-                checkIfAllMembersProcessed();
             }
+
+            if (completedCount > 0) {
+                historyText.setText(
+                        String.format(Locale.US, "Contribution to Shared Goal: $%s (%d cycles)",
+                                CURRENCY_FORMAT.format(historicalContribution),
+                                completedCount)
+                );
+            } else {
+                historyText.setText("Contribution to Shared Goal: $0.00");
+            }
+
+            Log.d(TAG, "Member " + memberEmail + " contributed: $" + historicalContribution);
+            markMemberProcessed(memberEmail, historicalContribution, loadId);
         });
     }
 
+    /**
+     * Mark a member as processed and update totals (with duplicate prevention)
+     */
+    private synchronized void markMemberProcessed(String memberEmail, double contribution, int loadId) {
+        // Double-check load ID
+        if (loadId != currentLoadId) {
+            Log.d(TAG, "Ignoring stale markMemberProcessed for " + memberEmail);
+            return;
+        }
+
+        // Check if already processed
+        if (processedMembers.contains(memberEmail)) {
+            Log.w(TAG, "WARNING: Member " + memberEmail + " already processed! Ignoring duplicate.");
+            return;
+        }
+
+        processedMembers.add(memberEmail);
+        memberContributions.put(memberEmail, contribution);
+
+        Log.d(TAG, "Processed member " + memberEmail + ": $" + contribution +
+                " (Total: " + processedMembers.size() + "/" + totalMembers + ")");
+
+        checkIfAllMembersProcessed();
+    }
+
     private void checkIfAllMembersProcessed() {
-        if (membersProcessed >= totalMembers) {
-            savingCircleViewModel.getSavingCircleById(circleId).observe(this, circle -> {
-                if (circle != null) {
-                    updateOverallProgress(totalProgressAmount, circle.getGoalAmount());
-                }
-            });
+        if (processedMembers.size() >= totalMembers) {
+            // Calculate total from the map
+            double totalContributions = 0;
+            for (Double contribution : memberContributions.values()) {
+                totalContributions += contribution;
+            }
+
+            Log.d(TAG, "All members processed. Total contributions: $" + totalContributions);
+            updateOverallProgress(totalContributions, goalAmount);
         }
     }
 
@@ -428,6 +322,6 @@ public class SavingCircleDetailActivity extends AppCompatActivity {
         );
         binding.overallProgressBar.setProgress(Math.min(progressPercentage, 100));
 
-        Log.d(TAG, "Total Progress: $" + totalContributions + " / $" + goalAmount);
+        Log.d(TAG, "=== FINAL Total Progress: $" + totalContributions + " / $" + goalAmount + " ===");
     }
 }

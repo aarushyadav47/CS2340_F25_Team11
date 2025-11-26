@@ -20,6 +20,7 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
     private List<Expense> expenses = new ArrayList<>();
     private OnItemClickListener clickListener;
 
+    // Set click listener for item clicks
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.clickListener = listener;
     }
@@ -43,11 +44,13 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
         return expenses.size();
     }
 
+    // Update the expense list
     public void setExpenses(List<Expense> expenses) {
         this.expenses = expenses;
         notifyDataSetChanged();
     }
 
+    // Get expense at specific position
     public Expense getExpenseAt(int position) {
         return expenses.get(position);
     }
@@ -63,6 +66,7 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
         private TextView textViewCategory;
         private TextView textViewDate;
 
+        // Initialize view holder with item view
         public ExpenseViewHolder(@NonNull View itemView) {
             super(itemView);
             textViewName = itemView.findViewById(R.id.text_view_name);
@@ -78,6 +82,7 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
             });
         }
 
+        // Bind expense data to views
         public void bind(Expense expense) {
             textViewName.setText(expense.getName());
             textViewAmount.setText(String.format(Locale.US, "$%.2f", expense.getAmount()));

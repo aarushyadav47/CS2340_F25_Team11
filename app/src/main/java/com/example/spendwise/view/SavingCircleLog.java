@@ -26,14 +26,24 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+
+import com.example.spendwise.model.SavingCircleMember;
+import com.example.spendwise.model.MemberCycle;
 
 public class SavingCircleLog extends AppCompatActivity {
     private SavingCircleViewModel savingCircleViewModel;
+    private SavingCircleAdapter adapter;
     private final Calendar calendar = Calendar.getInstance();
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     private long dashboardTimestamp;
+
+    // Load ID system to prevent stale callbacks
+    private int currentLoadId = 0;
+    private Map<String, Integer> circleLoadIds = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,7 +110,6 @@ public class SavingCircleLog extends AppCompatActivity {
 
     private void setupNavBar(String dashboardDate) {
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
-        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
 
         dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
         findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
@@ -118,7 +127,12 @@ public class SavingCircleLog extends AppCompatActivity {
             savingIntent.putExtra("selected_date", dashboardDate);
             startActivity(savingIntent);
         });
-        chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
+
+        findViewById(R.id.chatbot_navigate).setOnClickListener(v -> {
+            Intent chatbotIntent = new Intent(this, Chatbot.class);
+            chatbotIntent.putExtra("selected_date", dashboardDate);
+            startActivity(chatbotIntent);
+        });
     }
 
     private void saveSavingCircle() {
@@ -255,13 +269,26 @@ public class SavingCircleLog extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.savingCircle_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        SavingCircleAdapter adapter = new SavingCircleAdapter();
+        adapter = new SavingCircleAdapter();
         recyclerView.setAdapter(adapter);
+
+        final boolean[] isFirstLoad = {true};
 
         savingCircleViewModel.getSavingCircles().observe(this, savingCircles -> {
             adapter.setSavingCircles(savingCircles);
             View savingCircleMsg = findViewById(R.id.savingCircle_msg);
             savingCircleMsg.setVisibility(savingCircles.isEmpty() ? View.VISIBLE : View.GONE);
+
+            // Only increment load ID if this is NOT the first load (first load uses onResume's increment)
+            if (!isFirstLoad[0]) {
+                currentLoadId++;
+                Log.d("SavingCircleLog", "=== NEW LOAD ID: " + currentLoadId + " (from observer - data changed) ===");
+            } else {
+                isFirstLoad[0] = false;
+                Log.d("SavingCircleLog", "=== First observer callback, using load ID from onResume: " + currentLoadId + " ===");
+            }
+
+            recalculateAllProgress(savingCircles);
         });
 
         adapter.setOnItemClickListener(savingCircle -> {
@@ -411,5 +438,148 @@ public class SavingCircleLog extends AppCompatActivity {
         cancelButton.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Force recalculation when returning to this page
+        currentLoadId++;
+        Log.d("SavingCircleLog", "=== NEW LOAD ID: " + currentLoadId + " (from onResume, date: " + dateFormat.format(dashboardTimestamp) + ") ===");
+
+        // Only recalculate if adapter is already set up
+        if (adapter != null) {
+            List<SavingCircle> currentCircles = savingCircleViewModel.getSavingCircles().getValue();
+            if (currentCircles != null && !currentCircles.isEmpty()) {
+                recalculateAllProgress(currentCircles);
+            }
+        } else {
+            Log.d("SavingCircleLog", "Adapter not ready yet, will calculate when observer fires");
+        }
+    }
+
+    /**
+     * Recalculate progress for all circles
+     */
+    private void recalculateAllProgress(List<SavingCircle> circles) {
+        if (circles == null || circles.isEmpty()) {
+            return;
+        }
+
+        Log.d("SavingCircleLog", "=== RECALCULATING " + circles.size() + " CIRCLES FOR LOAD ID: " + currentLoadId + " ===");
+        for (SavingCircle circle : circles) {
+            calculateCircleProgressOneTime(circle, currentLoadId);
+        }
+    }
+
+    /**
+     * Calculate progress using ONE-TIME reads with load ID validation
+     */
+    private void calculateCircleProgressOneTime(SavingCircle circle, int loadId) {
+        String circleId = circle.getId();
+
+        // Store this load ID for this circle
+        circleLoadIds.put(circleId, loadId);
+
+        Log.d("SavingCircleLog", ">>> Calculating: " + circle.getGroupName() + " (LoadID: " + loadId + ")");
+
+        savingCircleViewModel.getSavingCircleMembersOnce(circleId, members -> {
+            // Check if this callback is still valid
+            Integer currentCircleLoadId = circleLoadIds.get(circleId);
+            if (currentCircleLoadId == null || currentCircleLoadId != loadId) {
+                Log.d("SavingCircleLog", "XXX Ignoring stale callback for " + circle.getGroupName() +
+                        " (callback loadId: " + loadId + ", current: " + currentCircleLoadId + ")");
+                return;
+            }
+
+            Log.d("SavingCircleLog", "Got " + members.size() + " members for: " + circle.getGroupName());
+            processMembers(circle, members, loadId);
+        });
+    }
+
+    /**
+     * Process all members and calculate total progress
+     */
+    private void processMembers(SavingCircle circle, List<SavingCircleMember> members, int loadId) {
+        // Double-check load ID
+        Integer currentCircleLoadId = circleLoadIds.get(circle.getId());
+        if (currentCircleLoadId == null || currentCircleLoadId != loadId) {
+            Log.d("SavingCircleLog", "XXX Ignoring stale processMembers for " + circle.getGroupName());
+            return;
+        }
+
+        if (members == null || members.isEmpty()) {
+            Log.d("SavingCircleLog", "No members for " + circle.getGroupName());
+            adapter.setCircleProgress(circle.getId(), 0, circle.getGoalAmount());
+            return;
+        }
+
+        final int[] membersProcessed = {0};
+        final double[] totalProgress = {0};
+        final int totalMembers = members.size();
+
+        for (SavingCircleMember member : members) {
+            final String memberEmail = member.getEmail();
+
+            if (member.getJoinedAt() > dashboardTimestamp) {
+                Log.d("SavingCircleLog", "  ✗ " + memberEmail + " not joined yet");
+                synchronized (membersProcessed) {
+                    membersProcessed[0]++;
+                    checkAndUpdateProgress(circle, membersProcessed[0], totalMembers, totalProgress[0], loadId);
+                }
+                continue;
+            }
+
+            savingCircleViewModel.getMemberCycleHistoryOnce(circle.getId(), memberEmail, cycles -> {
+                // Validate load ID before processing (reuse variable name for clarity in lambda)
+                Integer loadIdCheck = circleLoadIds.get(circle.getId());
+                if (loadIdCheck == null || loadIdCheck != loadId) {
+                    Log.d("SavingCircleLog", "XXX Ignoring stale cycle callback for " + memberEmail);
+                    return;
+                }
+
+                double memberContribution = 0;
+                int completedCycles = 0;
+
+                if (cycles != null && !cycles.isEmpty()) {
+                    for (MemberCycle cycle : cycles) {
+                        if (cycle.isComplete() && cycle.getEndDate() <= dashboardTimestamp) {
+                            memberContribution += cycle.getEndAmount();
+                            completedCycles++;
+                        }
+                    }
+                }
+
+                Log.d("SavingCircleLog", "  ✓ " + memberEmail + ": $" + String.format("%.2f", memberContribution) + " (" + completedCycles + " cycles)");
+
+                synchronized (membersProcessed) {
+                    totalProgress[0] += memberContribution;
+                    membersProcessed[0]++;
+                    checkAndUpdateProgress(circle, membersProcessed[0], totalMembers, totalProgress[0], loadId);
+                }
+            });
+        }
+    }
+
+    /**
+     * Check if all members processed and update the UI
+     */
+    private void checkAndUpdateProgress(SavingCircle circle, int processed, int total, double totalProgress, int loadId) {
+        // Validate load ID one final time before updating UI
+        Integer validLoadId = circleLoadIds.get(circle.getId());
+        if (validLoadId == null || validLoadId != loadId) {
+            Log.d("SavingCircleLog", "XXX Ignoring stale progress update for " + circle.getGroupName());
+            return;
+        }
+
+        if (processed >= total) {
+            double goalAmount = circle.getGoalAmount();
+            int percentage = goalAmount > 0 ? (int)((totalProgress / goalAmount) * 100) : 0;
+
+            Log.d("SavingCircleLog", "✓✓✓ FINAL: " + circle.getGroupName() + " = $" + String.format("%.2f", totalProgress) +
+                    " / $" + String.format("%.2f", goalAmount) + " (" + percentage + "%) [LoadID: " + loadId + "]");
+
+            adapter.setCircleProgress(circle.getId(), totalProgress, goalAmount);
+        }
     }
 }
