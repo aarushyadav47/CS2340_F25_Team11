@@ -30,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.ChatbotBinding;
 import com.example.spendwise.model.ChatMessage;
+import com.example.spendwise.util.ThemeManager;
 import com.example.spendwise.model.ChatSession;
 import com.example.spendwise.viewModel.ChatbotViewModel;
 
@@ -46,6 +47,7 @@ public class Chatbot extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.loadTheme(this);
         super.onCreate(savedInstanceState);
 
         binding = ChatbotBinding.inflate(getLayoutInflater());

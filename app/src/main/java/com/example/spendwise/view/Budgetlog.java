@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.BudgetlogBinding;
 import com.example.spendwise.model.Category;
+import com.example.spendwise.util.ThemeManager;
 import com.example.spendwise.model.Budget;
 
 import java.text.SimpleDateFormat;
@@ -66,6 +67,7 @@ public class Budgetlog extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.loadTheme(this);
         super.onCreate(savedInstanceState);
 
         // Inflate layout

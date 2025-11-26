@@ -10,12 +10,14 @@ import android.widget.Button;
 
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.ActivityMainBinding;
+import com.example.spendwise.util.ThemeManager;
 import com.google.firebase.FirebaseApp;
 
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.loadTheme(this);
         super.onCreate(savedInstanceState);
         //Using data binding to inflate the layout(no explicit mention)
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());

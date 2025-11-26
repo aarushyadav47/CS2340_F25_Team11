@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.spendwise.databinding.LoginBinding;
-
+import com.example.spendwise.util.ThemeManager;
 import com.example.spendwise.viewModel.LoginViewModel;
 
 public class Login extends AppCompatActivity {
@@ -18,6 +18,7 @@ public class Login extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.loadTheme(this);
         super.onCreate(savedInstanceState);
 
         binding = LoginBinding.inflate(getLayoutInflater());

@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.spendwise.R;
 import com.example.spendwise.databinding.ExpenselogBinding;
 import com.example.spendwise.model.Category;
+import com.example.spendwise.util.ThemeManager;
 import com.example.spendwise.model.Expense;
 import com.example.spendwise.model.SavingCircle;
 
@@ -54,6 +55,7 @@ public class ExpenseLog extends AppCompatActivity {
     private Map<String, String> savingCircleMap = new HashMap<>(); // Maps display name to circle ID
 
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.loadTheme(this);
         super.onCreate(savedInstanceState);
 
         // Using data binding to inflate the layout

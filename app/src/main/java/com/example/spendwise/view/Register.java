@@ -10,6 +10,7 @@ import com.example.spendwise.databinding.RegisterBinding;
 import com.example.spendwise.model.Category;
 import com.example.spendwise.model.Expense;
 import com.example.spendwise.model.Budget;
+import com.example.spendwise.util.ThemeManager;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
@@ -31,6 +32,7 @@ public class Register extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.loadTheme(this);
         super.onCreate(savedInstanceState);
 
         binding = RegisterBinding.inflate(getLayoutInflater());
