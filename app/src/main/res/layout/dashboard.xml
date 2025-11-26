@@ -87,6 +87,24 @@
                 app:thumbTint="@color/white"
                 app:trackTint="#CCCCCC"/>
 
+            <!-- Profile Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/profile_button"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:text="Profile"
+                android:textSize="12sp"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#2196F3"
+                app:cornerRadius="24dp"
+                app:icon="@drawable/ic_profile"
+                app:iconTint="#FFFFFF"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"/>
+
             <!-- Logout Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/logout_button"

@@ -8,12 +8,21 @@ public class User {
     // Password should be stored securely in real apps!
     private String password;
 
+    private String profileImageUrl;
+    private java.util.List<String> friends;
+
     // Constructors
+    public User() {
+        // Default constructor required for calls to DataSnapshot.getValue(User.class)
+        this.friends = new java.util.ArrayList<>();
+    }
+
     public User(String id, String name, String email, String password) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.password = password;
+        this.friends = new java.util.ArrayList<>();
     }
 
     // Getters and Setters
@@ -51,6 +60,37 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public java.util.List<String> getFriends() {
+        return friends;
+    }
+
+    public void setFriends(java.util.List<String> friends) {
+        this.friends = friends;
+    }
+
+    public void addFriend(String friendId) {
+        if (this.friends == null) {
+            this.friends = new java.util.ArrayList<>();
+        }
+        if (!this.friends.contains(friendId)) {
+            this.friends.add(friendId);
+        }
+    }
+
+    public void removeFriend(String friendId) {
+        if (this.friends != null) {
+            this.friends.remove(friendId);
+        }
     }
 
     // Print user information to console
