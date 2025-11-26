@@ -105,7 +105,7 @@ public class Chatbot extends AppCompatActivity {
             showPreviousChatSelectionDialog(message);
         });
 
-        setupNavigation();
+        setupNavBar(dashboardDate);
     }
 
     /** Setup quick command buttons */
@@ -294,42 +294,30 @@ public class Chatbot extends AppCompatActivity {
     }
 
     /** Bottom navigation setup */
-    private void setupNavigation() {
+    private void setupNavBar(String dashboardDate) {
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
-        View expenseLogNavigate = findViewById(R.id.expenseLog_navigate);
-        View budgetNavigate = findViewById(R.id.budget_navigate);
-        View savingCircleNavigate = findViewById(R.id.savingCircle_navigate);
-        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
 
-        dashboardNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, Dashboard.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
+        dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
+        findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
+            Intent expenseIntent = new Intent(this, ExpenseLog.class);
+            expenseIntent.putExtra("selected_date", dashboardDate);
+            startActivity(expenseIntent);
+        });
+        findViewById(R.id.budget_navigate).setOnClickListener(v -> {
+            Intent budgetIntent = new Intent(this, Budgetlog.class);
+            budgetIntent.putExtra("selected_date", dashboardDate);
+            startActivity(budgetIntent);
+        });
+        findViewById(R.id.savingCircle_navigate).setOnClickListener(v -> {
+            Intent savingIntent = new Intent(this, SavingCircleLog.class);
+            savingIntent.putExtra("selected_date", dashboardDate);
+            startActivity(savingIntent);
         });
 
-        expenseLogNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, ExpenseLog.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
+        findViewById(R.id.chatbot_navigate).setOnClickListener(v -> {
+            Intent chatbotIntent = new Intent(this, Chatbot.class);
+            chatbotIntent.putExtra("selected_date", dashboardDate);
+            startActivity(chatbotIntent);
         });
-
-        budgetNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, Budgetlog.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
-        });
-
-        savingCircleNavigate.setOnClickListener(v -> {
-            Intent intent = new Intent(this, SavingCircleLog.class);
-            intent.putExtra("selected_date",
-                    shortDateFormat.format(currentSimulatedDate.getTime()));
-            startActivity(intent);
-        });
-
-        chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class)));
     }
 }

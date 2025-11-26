@@ -27,11 +27,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
+
 import com.example.spendwise.model.SavingCircleMember;
 import com.example.spendwise.model.MemberCycle;
 
@@ -111,7 +110,6 @@ public class SavingCircleLog extends AppCompatActivity {
 
     private void setupNavBar(String dashboardDate) {
         View dashboardNavigate = findViewById(R.id.dashboard_navigate);
-        View chatbotNavigate = findViewById(R.id.chatbot_navigate);
 
         dashboardNavigate.setOnClickListener(v -> startActivity(new Intent(this, Dashboard.class)));
         findViewById(R.id.expenseLog_navigate).setOnClickListener(v -> {
@@ -129,7 +127,12 @@ public class SavingCircleLog extends AppCompatActivity {
             savingIntent.putExtra("selected_date", dashboardDate);
             startActivity(savingIntent);
         });
-        chatbotNavigate.setOnClickListener(v -> startActivity(new Intent(this, Chatbot.class)));
+
+        findViewById(R.id.chatbot_navigate).setOnClickListener(v -> {
+            Intent chatbotIntent = new Intent(this, Chatbot.class);
+            chatbotIntent.putExtra("selected_date", dashboardDate);
+            startActivity(chatbotIntent);
+        });
     }
 
     private void saveSavingCircle() {
