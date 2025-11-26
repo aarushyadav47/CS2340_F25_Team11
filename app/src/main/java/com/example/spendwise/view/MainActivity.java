@@ -1,5 +1,6 @@
 package com.example.spendwise.view;
 
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,6 +27,12 @@ public class MainActivity extends AppCompatActivity {
         // binding.setVariable(BR.viewModel, viewModel);
         // binding.setLifecycleOwner(this);
         // the viewmodel is binded by this file - not destroyed by rotations
+
+        // Force status bar color (the purple bar at top)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(0xFF6200EE); // Purple
+            // Or use: getWindow().setStatusBarColor(Color.parseColor("#6200EE"));
+        }
 
         Button openBtn = findViewById(R.id.start_button);
         openBtn.setOnClickListener(new View.OnClickListener() {
