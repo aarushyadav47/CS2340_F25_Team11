@@ -1,6 +1,7 @@
 package com.example.spendwise.view;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -8,7 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.spendwise.databinding.LoginBinding;
-
+import com.example.spendwise.util.ThemeHelper;
 import com.example.spendwise.viewModel.LoginViewModel;
 
 public class Login extends AppCompatActivity {
@@ -18,6 +19,9 @@ public class Login extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Apply theme before setContentView
+        ThemeHelper.applyTheme(this);
+
         super.onCreate(savedInstanceState);
 
         binding = LoginBinding.inflate(getLayoutInflater());
@@ -26,14 +30,27 @@ public class Login extends AppCompatActivity {
         loginViewModel = new ViewModelProvider(this).get(LoginViewModel.class);
         binding.setLifecycleOwner(this);
 
+        // Force status bar color (the purple bar at top)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(0xFF6200EE); // Purple
+            // Or use: getWindow().setStatusBarColor(Color.parseColor("#6200EE"));
+        }
 
         loginViewModel.getLoginResult().observe(this, result -> {
             if ("SUCCESS".equals(result)) {
+                // Load theme preference from Firebase after successful login
+                ThemeHelper.loadThemeFromFirebase(this);
+
                 Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(Login.this, Dashboard.class);
-                intent.putExtra("from_login", true);
-                startActivity(intent);
-                finish();
+
+                // Small delay to allow theme to load from Firebase
+                binding.getRoot().postDelayed(() -> {
+                    Intent intent = new Intent(Login.this, Dashboard.class);
+                    intent.putExtra("from_login", true);
+                    startActivity(intent);
+                    finish();
+                }, 300); // 300ms delay
+
             } else {
                 Toast.makeText(this, result, Toast.LENGTH_LONG).show();
             }

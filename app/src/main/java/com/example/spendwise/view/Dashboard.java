@@ -115,6 +115,8 @@ public class Dashboard extends AppCompatActivity {
 
         loadDashboardData();
         setupThemeToggle();
+
+        ThemeHelper.loadThemeFromFirebase(this);
     }
 
     private void setupNotifications() {
@@ -381,8 +383,15 @@ public class Dashboard extends AppCompatActivity {
     }
 
     private void performLogout() {
+        // Note: We don't clear theme preference anymore
+        // It will remain in Firebase for when user logs back in
+
+        // Only clear other preferences
         SharedPreferences.Editor editor = preferences.edit();
+        String themeMode = String.valueOf(ThemeHelper.getThemeMode(this));
         editor.clear();
+        // Restore theme preference
+        editor.putInt("theme_mode", Integer.parseInt(themeMode));
         editor.apply();
 
         auth.signOut();
@@ -863,8 +872,7 @@ public class Dashboard extends AppCompatActivity {
     }
 
     private void setupThemeToggle() {
-        // Option 1: Using a Switch
-        SwitchCompat themeSwitch = findViewById(R.id.theme_switch);
+        SwitchMaterial themeSwitch = findViewById(R.id.theme_switch);
         themeSwitch.setChecked(ThemeHelper.isDarkMode(this));
 
         themeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -874,6 +882,15 @@ public class Dashboard extends AppCompatActivity {
                 ThemeHelper.setTheme(this, ThemeHelper.LIGHT_MODE);
             }
             recreate(); // Restart activity to apply theme
+        });
+
+        // Optional: Sync theme changes from Firebase in real-time
+        ThemeHelper.syncThemeFromFirebase(this, newThemeMode -> {
+            // Theme changed from another device, recreate activity
+            runOnUiThread(() -> {
+                themeSwitch.setChecked(newThemeMode == ThemeHelper.DARK_MODE);
+                recreate();
+            });
         });
     }
 }
