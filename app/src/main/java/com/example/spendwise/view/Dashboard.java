@@ -61,6 +61,7 @@ public class Dashboard extends AppCompatActivity {
 
     private static final String PREFS_NAME = "SpendWisePrefs";
     private static final String KEY_SIMULATED_DATE = "simulated_date";
+    private boolean hasCheckedMissedExpenses = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +96,52 @@ public class Dashboard extends AppCompatActivity {
         setupRemainingBudgetsButton();
 
         loadDashboardData();
+
+        if (savedInstanceState == null && getIntent().getBooleanExtra("from_login", false) && !hasCheckedMissedExpenses) {
+            expenseViewModel.getExpenses().observe(this, expenses -> {
+                if (hasCheckedMissedExpenses || expenses == null || expenses.isEmpty()) return;
+                checkMissedExpenses(expenses);
+                hasCheckedMissedExpenses = true;
+            });
+        }
+    }
+
+    private void checkMissedExpenses(List<Expense> expenses) {
+        Date mostRecentDate = null;
+        for (Expense expense : expenses) {
+            try {
+                Date expenseDate = shortDateFormat.parse(expense.getDate());
+                if (expenseDate != null) {
+                    if (mostRecentDate == null || expenseDate.after(mostRecentDate)) {
+                        mostRecentDate = expenseDate;
+                    }
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (mostRecentDate != null) {
+            long diffInMillies = Math.abs(currentSimulatedDate.getTime().getTime() - mostRecentDate.getTime());
+            long diff = java.util.concurrent.TimeUnit.DAYS.convert(diffInMillies, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+            if (diff > 3) {
+                showMissedExpenseDialog((int) diff);
+            }
+        }
+    }
+
+    private void showMissedExpenseDialog(int days) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Missed Expense Log")
+                .setMessage("It's been " + days + " days since your last expense!")
+                .setPositiveButton("Log Now", (dialog, which) -> {
+                    Intent intent = new Intent(Dashboard.this, ExpenseLog.class);
+                    intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
+                    startActivity(intent);
+                })
+                .setNegativeButton("Dismiss", null)
+                .show();
     }
 
     private void setupPieChart() {
