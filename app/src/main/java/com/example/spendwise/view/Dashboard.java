@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,10 +23,12 @@ import com.example.spendwise.adapter.BudgetAdapter;
 import com.example.spendwise.databinding.DashboardBinding;
 import com.example.spendwise.model.Budget;
 import com.example.spendwise.model.Expense;
+import com.example.spendwise.util.ThemeHelper;
 import com.example.spendwise.viewModel.BudgetViewModel;
 import com.example.spendwise.viewModel.DashboardAnalyticsViewModel;
 import com.example.spendwise.viewModel.ExpenseViewModel;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.auth.FirebaseAuth;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.PieChart;
@@ -111,52 +114,7 @@ public class Dashboard extends AppCompatActivity {
         setupNotifications();
 
         loadDashboardData();
-
-        if (savedInstanceState == null && getIntent().getBooleanExtra("from_login", false) && !hasCheckedMissedExpenses) {
-            expenseViewModel.getExpenses().observe(this, expenses -> {
-                if (hasCheckedMissedExpenses || expenses == null || expenses.isEmpty()) return;
-                checkMissedExpenses(expenses);
-                hasCheckedMissedExpenses = true;
-            });
-        }
-    }
-
-    private void checkMissedExpenses(List<Expense> expenses) {
-        Date mostRecentDate = null;
-        for (Expense expense : expenses) {
-            try {
-                Date expenseDate = shortDateFormat.parse(expense.getDate());
-                if (expenseDate != null) {
-                    if (mostRecentDate == null || expenseDate.after(mostRecentDate)) {
-                        mostRecentDate = expenseDate;
-                    }
-                }
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (mostRecentDate != null) {
-            long diffInMillies = Math.abs(currentSimulatedDate.getTime().getTime() - mostRecentDate.getTime());
-            long diff = java.util.concurrent.TimeUnit.DAYS.convert(diffInMillies, java.util.concurrent.TimeUnit.MILLISECONDS);
-
-            if (diff > 3) {
-                showMissedExpenseDialog((int) diff);
-            }
-        }
-    }
-
-    private void showMissedExpenseDialog(int days) {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Missed Expense Log")
-                .setMessage("It's been " + days + " days since your last expense!")
-                .setPositiveButton("Log Now", (dialog, which) -> {
-                    Intent intent = new Intent(Dashboard.this, ExpenseLog.class);
-                    intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
-                    startActivity(intent);
-                })
-                .setNegativeButton("Dismiss", null)
-                .show();
+        setupThemeToggle();
     }
 
     private void setupNotifications() {
@@ -189,10 +147,30 @@ public class Dashboard extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
 
-        // Setup RecyclerView with your existing adapter
+        // Setup RecyclerView with click listener
         RecyclerView notificationsRecycler = dialogView.findViewById(R.id.notifications_recycler);
         notificationsRecycler.setLayoutManager(new LinearLayoutManager(this));
         NotificationAdapter adapter = new NotificationAdapter();
+
+        // Set item click listener to handle individual notification clicks
+        adapter.setOnItemClickListener(item -> {
+            isNotificationDialogShowing = false;
+            dialog.dismiss();
+
+            // Navigate based on notification type
+            if (item.getType() == NotificationViewModel.NotificationItem.Type.NO_EXPENSES) {
+                // Take user to expense log page
+                Intent intent = new Intent(Dashboard.this, ExpenseLog.class);
+                intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
+                startActivity(intent);
+            } else if (item.getType() == NotificationViewModel.NotificationItem.Type.BUDGET_90_PERCENT) {
+                // Take user to budget page
+                Intent intent = new Intent(Dashboard.this, Budgetlog.class);
+                intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
+                startActivity(intent);
+            }
+        });
+
         adapter.setNotifications(notifications);
         notificationsRecycler.setAdapter(adapter);
 
@@ -201,6 +179,8 @@ public class Dashboard extends AppCompatActivity {
         View btnViewBudgets = dialogView.findViewById(R.id.btn_view_budgets);
 
         btnDismiss.setOnClickListener(v -> {
+            // Dismiss all notifications
+            notificationViewModel.clearAllNotifications();
             isNotificationDialogShowing = false;
             dialog.dismiss();
         });
@@ -219,6 +199,7 @@ public class Dashboard extends AppCompatActivity {
 
         dialog.show();
         Log.d("Dashboard", "Dialog shown successfully");
+        setupThemeToggle();
     }
 
     private void setupPieChart() {
@@ -445,8 +426,12 @@ public class Dashboard extends AppCompatActivity {
             startActivity(intent);
         });
 
-        chatbotNavigate.setOnClickListener(v ->
-                startActivity(new Intent(this, Chatbot.class)));
+        chatbotNavigate.setOnClickListener(v -> {
+            Intent intent = new Intent(Dashboard.this, Chatbot.class);
+            intent.putExtra("selected_date",
+                    shortDateFormat.format(currentSimulatedDate.getTime()));
+            startActivity(intent);
+        });
     }
 
     private void setupQuickActions() {
@@ -875,5 +860,20 @@ public class Dashboard extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadDashboardData();
+    }
+
+    private void setupThemeToggle() {
+        // Option 1: Using a Switch
+        SwitchCompat themeSwitch = findViewById(R.id.theme_switch);
+        themeSwitch.setChecked(ThemeHelper.isDarkMode(this));
+
+        themeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                ThemeHelper.setTheme(this, ThemeHelper.DARK_MODE);
+            } else {
+                ThemeHelper.setTheme(this, ThemeHelper.LIGHT_MODE);
+            }
+            recreate(); // Restart activity to apply theme
+        });
     }
 }
