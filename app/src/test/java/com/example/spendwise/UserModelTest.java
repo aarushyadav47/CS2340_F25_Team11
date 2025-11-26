@@ -16,47 +16,42 @@ import java.io.PrintStream;
  */
 public class UserModelTest {
 
-    private final PrintStream originalOut = System.out;
-    private ByteArrayOutputStream outContent;
-
-    @Before
-    public void setUpStreams() {
-        outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
-    }
-
-    @After
-    public void restoreStreams() {
-        System.setOut(originalOut);
-    }
-
     @Test
     public void testUserConstructorAndGetters() {
-        User user = new User("123", "Alice", "alice@example.com", "secret");
+        User user = new User("1", "John Doe", "john@example.com", "secret");
 
-        assertEquals("ID should match constructor value", "123", user.getId());
-        assertEquals("Name should match constructor value", "Alice", user.getName());
-        assertEquals("Email should match constructor value", "alice@example.com", user.getEmail());
-        assertEquals("Password should match constructor value", "secret", user.getPassword());
+        assertEquals("1", user.getId());
+        assertEquals("John Doe", user.getName());
+        assertEquals("john@example.com", user.getEmail());
+        assertEquals("secret", user.getPassword());
     }
 
     @Test
-    public void testSettersAndPrintUserInfo() {
-        User user = new User("123", "Alice", "alice@example.com", "secret");
+    public void testSetters() {
+        User user = new User("1", "John", "john@mail.com", "pass");
 
-        user.setId("456");
-        user.setName("Bob");
-        user.setEmail("bob@example.com");
-        user.setPassword("new-secret");
+        user.setId("2");
+        user.setName("Jane");
+        user.setEmail("jane@mail.com");
+        user.setPassword("newpass");
+
+        assertEquals("2", user.getId());
+        assertEquals("Jane", user.getName());
+        assertEquals("jane@mail.com", user.getEmail());
+        assertEquals("newpass", user.getPassword());
+    }
+
+    @Test
+    public void testPrintUserInfo() {
+        User user = new User("1", "Alice", "alice@mail.com", "pwd");
+
+        // Capture console output
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(out));
 
         user.printUserInfo();
 
-        assertEquals("User: Bob, Email: bob@example.com" + System.lineSeparator(),
-                outContent.toString());
-        assertEquals("ID should update via setter", "456", user.getId());
-        assertEquals("Name should update via setter", "Bob", user.getName());
-        assertEquals("Email should update via setter", "bob@example.com", user.getEmail());
-        assertEquals("Password should update via setter", "new-secret", user.getPassword());
+        String output = out.toString().trim();
+        assertEquals("User: Alice, Email: alice@mail.com", output);
     }
 }
-

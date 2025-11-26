@@ -30,7 +30,9 @@ public class Login extends AppCompatActivity {
         loginViewModel.getLoginResult().observe(this, result -> {
             if ("SUCCESS".equals(result)) {
                 Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(Login.this, Dashboard.class));
+                Intent intent = new Intent(Login.this, Dashboard.class);
+                intent.putExtra("from_login", true);
+                startActivity(intent);
                 finish();
             } else {
                 Toast.makeText(this, result, Toast.LENGTH_LONG).show();

@@ -71,6 +71,7 @@ public class Dashboard extends AppCompatActivity {
 
     private static final String PREFS_NAME = "SpendWisePrefs";
     private static final String KEY_SIMULATED_DATE = "simulated_date";
+    private boolean hasCheckedMissedExpenses = false;
 
     private NotificationViewModel notificationViewModel;
     private NotificationAdapter notificationAdapter;
