@@ -11,6 +11,7 @@ import com.example.spendwise.model.Budget;
 import com.example.spendwise.model.MemberCycle;
 import com.example.spendwise.model.SavingCircle;
 import com.example.spendwise.model.SavingCircleMember;
+import com.example.spendwise.util.NotificationConstants;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -25,15 +26,15 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Queue;
 import java.util.Set;
 
 public class NotificationViewModel extends ViewModel {
 
     private static final String TAG = "NotificationViewModel";
-    private static final int NO_EXPENSE_DAYS = 3; // Alert if no expenses for 3 days
-    private static final double BUDGET_WARNING_THRESHOLD = 0.90; // 90% of budget
 
     private final MutableLiveData<List<NotificationItem>> pendingNotifications;
     private final MutableLiveData<Boolean> hasNotifications;
@@ -44,6 +45,10 @@ public class NotificationViewModel extends ViewModel {
     // Track shown notifications for this session
     private final Set<String> shownNotificationIds;
     private final Set<String> dismissedNotificationIds;
+    
+    // Queue system for preventing notification overlap
+    private final Queue<List<NotificationItem>> notificationQueue;
+    private boolean isProcessingQueue;
 
     public NotificationViewModel() {
         pendingNotifications = new MutableLiveData<>(new ArrayList<>());
@@ -53,6 +58,8 @@ public class NotificationViewModel extends ViewModel {
         dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
         shownNotificationIds = new HashSet<>();
         dismissedNotificationIds = new HashSet<>();
+        notificationQueue = new LinkedList<>();
+        isProcessingQueue = false;
     }
 
     /**
@@ -207,7 +214,7 @@ public class NotificationViewModel extends ViewModel {
         userRef.child("expenses").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                long threeDaysAgo = dashboardTimestamp - (NO_EXPENSE_DAYS * 24 * 60 * 60 * 1000);
+                long threeDaysAgo = dashboardTimestamp - (NotificationConstants.NO_EXPENSE_DAYS_THRESHOLD * 24 * 60 * 60 * 1000);
                 boolean hasRecentExpense = false;
                 long mostRecentExpenseDate = 0;
 
@@ -395,7 +402,7 @@ public class NotificationViewModel extends ViewModel {
 
                 Log.d(TAG, "Budget: " + budgetName + ", Spent: $" + totalSpent + " / $" + budgetAmount + " = " + percentageUsed + "%");
 
-                if (percentageUsed >= (BUDGET_WARNING_THRESHOLD * 100)) {
+                if (percentageUsed >= NotificationConstants.BUDGET_WARNING_PERCENTAGE_100) {
                     NotificationItem item = new NotificationItem(
                             NotificationItem.Type.BUDGET_90_PERCENT,
                             "budget_90_" + budgetName + "_" + cycleStart,
@@ -434,9 +441,50 @@ public class NotificationViewModel extends ViewModel {
             }
         }
 
-        pendingNotifications.setValue(newNotifications);
-        hasNotifications.setValue(!newNotifications.isEmpty());
-        Log.d(TAG, "Updated notifications: " + newNotifications.size() + " new items (filtered from " + notifications.size() + " total)");
+        if (newNotifications.isEmpty()) {
+            Log.d(TAG, "No new notifications to display");
+            return;
+        }
+
+        // Add to queue instead of immediately setting
+        notificationQueue.offer(newNotifications);
+        Log.d(TAG, "Added " + newNotifications.size() + " notifications to queue. Queue size: " + notificationQueue.size());
+        
+        // Process queue if not already processing
+        processNotificationQueue();
+    }
+
+    /**
+     * Process notifications from the queue one at a time
+     * This prevents overlapping dialogs
+     */
+    private void processNotificationQueue() {
+        if (isProcessingQueue || notificationQueue.isEmpty()) {
+            return;
+        }
+
+        isProcessingQueue = true;
+        List<NotificationItem> nextBatch = notificationQueue.poll();
+        
+        if (nextBatch != null && !nextBatch.isEmpty()) {
+            Log.d(TAG, "Processing notification queue. Showing " + nextBatch.size() + " notifications. " + 
+                    notificationQueue.size() + " remaining in queue.");
+            pendingNotifications.setValue(nextBatch);
+            hasNotifications.setValue(true);
+        } else {
+            isProcessingQueue = false;
+            processNotificationQueue(); // Process next in queue if any
+        }
+    }
+
+    /**
+     * Called when current notification batch is dismissed
+     * This allows the next batch in queue to be shown
+     */
+    public void onNotificationBatchDismissed() {
+        isProcessingQueue = false;
+        Log.d(TAG, "Notification batch dismissed. Processing next in queue if available.");
+        processNotificationQueue();
     }
 
     private String sanitizeEmail(String email) {

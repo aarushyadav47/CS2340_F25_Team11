@@ -73,10 +73,10 @@ public class Dashboard extends AppCompatActivity {
     private NotificationAdapter notificationAdapter;
     private long currentDashboardTimestamp;
 
-    private boolean isNotificationDialogShowing = false;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Load theme before setting content view
+        com.example.spendwise.util.ThemeManager.loadTheme(this);
         super.onCreate(savedInstanceState);
 
         binding = DashboardBinding.inflate(getLayoutInflater());
@@ -103,6 +103,7 @@ public class Dashboard extends AppCompatActivity {
 
         setupCalendarSelector();
         setupLogoutButton();
+        setupProfileButton();
         setupNavigation();
         setupQuickActions();
         setupBudgetCards();
@@ -123,14 +124,6 @@ public class Dashboard extends AppCompatActivity {
 
     private void showNotificationDialog(List<NotificationViewModel.NotificationItem> notifications) {
         Log.d("Dashboard", "showNotificationDialog called with " + notifications.size() + " notifications");
-
-        // Prevent showing multiple dialogs
-        if (isNotificationDialogShowing) {
-            Log.d("Dashboard", "Dialog already showing");
-            return;
-        }
-
-        isNotificationDialogShowing = true;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_notification_reminder, null);
@@ -154,20 +147,23 @@ public class Dashboard extends AppCompatActivity {
         View btnViewBudgets = dialogView.findViewById(R.id.btn_view_budgets);
 
         btnDismiss.setOnClickListener(v -> {
-            isNotificationDialogShowing = false;
             dialog.dismiss();
+            // Notify ViewModel that this batch is dismissed so next can be shown
+            notificationViewModel.onNotificationBatchDismissed();
         });
 
         btnViewBudgets.setOnClickListener(v -> {
-            isNotificationDialogShowing = false;
             dialog.dismiss();
             Intent intent = new Intent(Dashboard.this, Budgetlog.class);
             intent.putExtra("selected_date", shortDateFormat.format(currentSimulatedDate.getTime()));
             startActivity(intent);
+            // Notify ViewModel that this batch is dismissed so next can be shown
+            notificationViewModel.onNotificationBatchDismissed();
         });
 
         dialog.setOnDismissListener(d -> {
-            isNotificationDialogShowing = false;
+            // Notify ViewModel that this batch is dismissed so next can be shown
+            notificationViewModel.onNotificationBatchDismissed();
         });
 
         dialog.show();
@@ -341,6 +337,16 @@ public class Dashboard extends AppCompatActivity {
     private void setupLogoutButton() {
         View logoutButton = findViewById(R.id.logout_button);
         logoutButton.setOnClickListener(v -> showLogoutDialog());
+    }
+
+    private void setupProfileButton() {
+        View profileButton = findViewById(R.id.profile_button);
+        if (profileButton != null) {
+            profileButton.setOnClickListener(v -> {
+                Intent intent = new Intent(Dashboard.this, ProfileActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private void showLogoutDialog() {

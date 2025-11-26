@@ -2,6 +2,8 @@ package com.example.spendwise.view;
 
 import android.util.Log;
 
+import com.example.spendwise.util.NotificationConstants;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -52,7 +54,7 @@ public class Network {
 
                 if (!response.isSuccessful()) {
                     // Graceful error
-                    cb.onError("😴 Llama is napping. Please try again later! (HTTP " + response.code() + ")");
+                    cb.onError(NotificationConstants.LLAMA_NAPPING_MESSAGE + " (HTTP " + response.code() + ")");
                     return;
                 }
 
@@ -68,7 +70,7 @@ public class Network {
 
             } catch (Exception e) {
                 // Graceful error on any exception
-                cb.onError("😴 Llama is napping. Please try again later!");
+                cb.onError(NotificationConstants.LLAMA_NAPPING_MESSAGE);
             }
         }).start();
     }
