@@ -7,6 +7,7 @@ public class User {
     private String email;
     // Password should be stored securely in real apps!
     private String password;
+    private String photoUrl; // Profile photo URL
 
     // Constructors
     public User(String id, String name, String email, String password) {
@@ -51,6 +52,14 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
+    }
+
+    public void setPhotoUrl(String photoUrl) {
+        this.photoUrl = photoUrl;
     }
 
     // Print user information to console
